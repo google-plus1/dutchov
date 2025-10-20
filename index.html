@@ -1,32 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERLC Bus Scheduler</title>
+<style>
+:root{
+  --bg:#0f1724; --card:#0b1220; --accent:#ff6b6b; --muted:#9aa4c0; --good:#1cc88a; --bad:#e43f5a;
+  --panel:#0f3460;
+}
+*{box-sizing:border-box}
+body{margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+  background:linear-gradient(180deg,#071024 0%, #0e1530 100%); color:#edf2f7;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;}
+header{padding:18px 24px;border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:12px}
+h1{margin:0;font-size:18px}
+.wrap{display:flex;gap:20px;padding:20px;max-width:1200px;margin:20px auto}
+.card{background:var(--card);border-radius:12px;padding:18px;width:360px;box-shadow:0 6px 30px rgba(2,6,23,.6)}
+.wide{flex:1;min-width:360px;padding:18px}
+label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
+input,select,textarea,button{width:100%;padding:10px;border-radius:8px;border:0;font-size:14px}
+textarea{min-height:88px;resize:vertical}
+button{background:var(--accent);color:#fff;border:0;cursor:pointer}
+.muted{color:var(--muted);font-size:13px}
+.infoRow{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:10px}
+.big{font-weight:700;font-size:18px}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{padding:8px;text-align:left;border-bottom:1px solid rgba(255,255,255,.03);font-size:14px}
+th{color:#fff;background:linear-gradient(90deg,var(--accent),#ff907a);border-radius:6px}
+.smallBtn{padding:6px 8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,.06);color:var(--muted);cursor:pointer}
+#activeDrivers{position:fixed;left:18px;bottom:18px;background:var(--panel);padding:12px;border-radius:10px;min-width:200px;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+#activeDrivers h3{margin:0 0 6px 0;color:var(--good);font-size:14px}
+.timer{margin-top:12px;padding:10px;border-radius:8px;text-align:center;font-weight:700;font-size:20px;color:#fff;background:var(--good);min-width:120px}
+.status{margin-top:8px;font-weight:600}
+.adminPanel{background:#07183a;padding:12px;border-radius:10px}
+.row{display:flex;gap:8px}
+.row > *{flex:1}
+.mutedSmall{font-size:12px;color:var(--muted)}
+.logItem{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px;border-radius:6px;background:rgba(255,255,255,.02);margin-bottom:8px}
+.danger{background:rgba(228,63,90,.08);border:1px solid rgba(228,63,90,.12);color:var(--bad);padding:6px 8px;border-radius:8px}
+.ok{background:rgba(28,200,138,.06);border:1px solid rgba(28,200,138,.12);color:var(--good);padding:6px 8px;border-radius:8px}
+.inlineSmall{display:inline-block;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.02);color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ERLC Bus Scheduler</h1>
+  <div style="margin-left:auto" class="mutedSmall">Local demo — data saved in browser storage</div>
+</header>
+
+<div class="wrap">
+  <!-- left column: login + driver controls -->
+  <div class="card">
+    <div id="loginSection">
+      <h2 style="margin:0 0 8px 0">Login</h2>
+      <label>Username</label>
+      <input id="username" placeholder="username" />
+      <label>Password</label>
+      <input id="password" type="password" placeholder="password" />
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="loginBtn">Login</button>
+        <button id="logoutBtn" style="display:none;background:#6c757d">Logout</button>
+      </div>
+      <div id="loginMsg" class="mutedSmall" style="margin-top:8px;color:#ffb4b4"></div>
+    </div>
+
+    <div id="driverControls" style="display:none;margin-top:12px">
+      <h3 style="margin:0 0 8px 0">Driver Controls</h3>
+      <label>Choose Line</label>
+      <select id="lineSelect"></select>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="confirmBtn">Load Timetable</button>
+        <button id="reverseBtn" title="Toggle original/return" class="smallBtn">Reverse</button>
+      </div>
+
+      <div class="infoRow">
+        <div>
+          <div class="mutedSmall">Current time</div>
+          <div id="currentTime" class="big"></div>
+        </div>
+        <div style="text-align:right">
+          <div class="mutedSmall">Next departure</div>
+          <div id="nextDeparture" class="big">--:--</div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px">
+        <div class="mutedSmall">Countdown to next departure</div>
+        <div id="countdown" class="timer">--:--</div>
+      </div>
+
+      <div id="stationControls" style="display:none;margin-top:12px">
+        <div style="display:flex;gap:8px">
+          <button id="departBtn">Depart</button>
+          <button id="nextBtn" disabled>Next Station</button>
+          <button id="endBtn">End</button>
+        </div>
+        <div id="timerDisplay" class="timer" style="margin-top:10px;background:var(--good)">--:--</div>
+        <div id="status" class="status mutedSmall"></div>
+        <div style="margin-top:8px" class="mutedSmall">*Next Station button only in last 15s before arrival or when late.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- middle: timetable / logs -->
+  <div class="wide card" style="min-width:520px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Timetable & Admin</h2>
+      <div id="userBadge" class="inlineSmall" style="display:none"></div>
+    </div>
+
+    <div id="timetableCard" style="margin-top:12px; display:none">
+      <div class="mutedSmall">Timetable for <strong id="tableTitle"></strong></div>
+      <table id="timetableTable">
+        <thead><tr><th>Stop</th><th>Arrival</th></tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- admin panel (visible to admins only) -->
+    <div id="adminPanel" style="margin-top:16px;display:none" class="adminPanel">
+      <h3 style="margin:0 0 8px 0;color:var(--good)">Admin Panel</h3>
+
+      <div style="display:flex;gap:10px">
+        <div style="flex:1">
+          <label>New Route name</label>
+          <input id="newRouteName" placeholder="e.g. Line X" />
+          <label>Frequency (minutes)</label>
+          <input id="newRouteFreq" placeholder="10" />
+          <label>Stops (one per line or comma separated)</label>
+          <textarea id="newRouteStops" placeholder="Spawn&#10;Chinatown&#10;Fire Department"></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="addRouteBtn">Add Route</button>
+            <button id="refreshRoutesBtn" class="smallBtn">Refresh</button>
+          </div>
+        </div>
+
+        <div style="width:260px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div class="mutedSmall">Routes</div>
+            <div class="mutedSmall">Actions</div>
+          </div>
+          <div id="routesList" style="margin-top:8px;max-height:280px;overflow:auto"></div>
+        </div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid rgba(255,255,255,.03);margin:12px 0">
+
+      <div style="display:flex;gap:12px">
+        <div style="flex:1">
+          <div class="mutedSmall">Shift Logs</div>
+          <div id="logsList" style="margin-top:8px;max-height:220px;overflow:auto"></div>
+        </div>
+        <div style="width:220px">
+          <div class="mutedSmall">Admin Actions</div>
+          <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
+            <button id="clearLogsBtn" class="smallBtn">Clear All Logs</button>
+            <button id="exportLogsBtn" class="smallBtn">Export Logs (JSON)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- active drivers -->
+<div id="activeDrivers" style="display:none">
+  <h3>Active Drivers</h3>
+  <ul id="driversList" style="margin:0;padding-left:18px"></ul>
+</div>
+
 <script>
 /* -------------------------
    Storage helpers & init
-------------------------- */
+   ------------------------- */
 const STORAGE_ROUTES = 'erlc_routes_v2';
 const STORAGE_LOGS = 'erlc_logs_v2';
 const STORAGE_USERS = 'erlc_users_v2';
 
+// users
 const defaultUsers = {
   "pwatg123admin": { pw: "utrechtov20092025", admin:true },
   "Roidkyadmin":   { pw: "Mohamed4obai", admin:true },
-  "Roidky":        { pw: "Mohamed4obai", admin:false },
-  "pwatg123":      { pw: "utrechtov20092025", admin:false },
+  "Roidky":   { pw: "Mohamed4obai", admin:false },
+  "pwatg123":   { pw: "utrechtov20092025", admin:false },
   "ilias4real.":   { pw: "OVIlias239", admin:false },
   "milandepro7":   { pw: "Utrechtov20702025", admin:false },
-  "driver":        { pw: "pass123", admin:false }
+  "driver":   { pw: "pass123", admin:false }
 };
 
+// default routes
 const defaultRoutes = {
   "Line A": { freq:10, stops:[ "Spawn","Chinatown","Central Park","Highrock" ] },
   "Line C": { freq:10, stops:[ "Spawn","Chinatown","Fire Department","Central Park","Hospital","Farms","Highrock","Springfield" ] },
   "FastLine": { freq:8, stops:[ "Springfield","River City" ] }
 };
 
+// Storage helpers
 function saveRoutes(routes){ localStorage.setItem(STORAGE_ROUTES, JSON.stringify(routes)); ROUTES = routes; }
 function loadRoutes(){
   let r = localStorage.getItem(STORAGE_ROUTES);
   if(!r){
     const temp = JSON.parse(JSON.stringify(defaultRoutes));
+    // add reverse routes
     for(const name in defaultRoutes){
       const revName = name+" 2";
       temp[revName] = { freq: defaultRoutes[name].freq, stops:[...defaultRoutes[name].stops].reverse() };
@@ -130,6 +309,7 @@ loginBtn.addEventListener('click', ()=>{
   if(!userRecord||userRecord.pw!==p){ loginMsg.textContent='Invalid username or password'; return;}
   CURRENT_USER = u;
   CURRENT_USER_IS_ADMIN = userRecord.admin;
+  loginMsg.textContent='';
   document.getElementById('loginSection').style.display='none';
   driverControls.style.display='block';
   logoutBtn.style.display='inline-block';
@@ -206,7 +386,7 @@ function loadSelectedRoute(){
 }
 
 /* -------------------------
-   Dynamic Timetable Render (+1 if late)
+   Dynamic Timetable Render
 ------------------------- */
 function renderDynamicTimetable(route, departTime){
   tableBody.innerHTML='';
@@ -214,27 +394,23 @@ function renderDynamicTimetable(route, departTime){
     const tr=document.createElement('tr');
     const tdStop=document.createElement('td'); tdStop.textContent=stop.name||stop;
     const tdTime=document.createElement('td');
-    if(departTime){
-      const arrival = new Date(departTime.getTime()+i*60000);
-      const diff = Math.floor((new Date() - arrival)/1000);
-      tdTime.textContent = diff>60 ? '+1' : formatTime(arrival);
-      if(diff>60) tdTime.style.color='#e43f5a';
-    } else {
-      tdTime.textContent = '--:--';
-    }
+    const arrival = departTime ? new Date(departTime.getTime()+i*60000) : '--:--';
+    tdTime.textContent = departTime? formatTime(arrival): '--:--';
     tr.appendChild(tdStop); tr.appendChild(tdTime);
     tableBody.appendChild(tr);
   });
 }
 
 /* -------------------------
-   Timer & Depart Logic
+   Next Departure Countdown
 ------------------------- */
 setInterval(()=>{
-  const n=new Date(); 
-  currentTime.textContent=n.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const n=new Date(); currentTime.textContent=n.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
 },1000);
 
+/* -------------------------
+   Depart & Timer Logic
+------------------------- */
 departBtn.addEventListener('click', ()=>{
   if(!selectedRoute){ alert('Load a route'); return; }
   actualDepartureTime = new Date();
@@ -248,12 +424,11 @@ departBtn.addEventListener('click', ()=>{
 nextBtn.addEventListener('click', ()=>{
   if(!selectedRoute || !actualDepartureTime) return;
   const arrival = new Date(actualDepartureTime.getTime() + currentStopIndex*60000);
+  const secRemaining = Math.ceil((arrival - new Date())/1000);
+  if(secRemaining>15){ statusDiv.textContent=`Next Station only in last 15s before arrival (${secRemaining}s left)`; return; }
   const diff = Math.floor((new Date() - arrival)/1000);
-  if(diff<=0){
-    statusDiv.innerHTML=`<span class="ok">On Time ✅</span> &nbsp;(${formatDiffSec(Math.abs(diff))})`;
-  } else {
-    statusDiv.innerHTML=`<span class="danger">Late ❌</span> &nbsp;(+${formatDiffSec(diff)})`;
-  }
+  if(diff<=0){ statusDiv.innerHTML=`<span class="ok">On Time ✅</span> &nbsp;(${formatDiffSec(Math.abs(diff))})`; }
+  else{ statusDiv.innerHTML=`<span class="danger">Late ❌</span> &nbsp;(-${formatDiffSec(diff)})`; }
   currentStopIndex++;
   if(currentStopIndex>=selectedRoute.stops.length){ endRoute(); return; }
   startStopTimerForIndex(currentStopIndex);
@@ -273,18 +448,12 @@ function updateTimerDisplay(){
   }
   const expected = new Date(actualDepartureTime.getTime()+currentStopIndex*60000);
   const diffSec = Math.ceil((expected - new Date())/1000);
-  if(diffSec>0){
-    timerDisplay.style.background='var(--good)';
-    timerDisplay.textContent=formatDiffSec(diffSec);
-    nextBtn.disabled = diffSec>15;
-  } else {
-    timerDisplay.style.background='var(--bad)';
-    timerDisplay.textContent='-'+formatDiffSec(Math.abs(diffSec));
-    nextBtn.disabled=false;
-  }
+  if(diffSec>0){ timerDisplay.style.background='var(--good)'; timerDisplay.textContent=formatDiffSec(diffSec); nextBtn.disabled=diffSec>15; }
+  else{ timerDisplay.style.background='var(--bad)'; timerDisplay.textContent='-'+formatDiffSec(Math.abs(diffSec)); nextBtn.disabled=false; }
 }
 
 function clearTimer(){ if(timerInterval) clearInterval(timerInterval); timerInterval=null; timerDisplay.textContent='--:--'; nextBtn.disabled=true; }
+
 function endRoute(){ clearTimer(); statusDiv.textContent='Route completed!'; currentStopIndex=0; actualDepartureTime=null; renderDynamicTimetable(selectedRoute, null); }
 
 /* -------------------------
@@ -302,10 +471,8 @@ function populateLogs(){
   if(!LOGS.length){ logsList.textContent='No shift logs'; return; }
   LOGS.forEach((l,idx)=>{
     const wrap=document.createElement('div'); wrap.className='logItem';
-    const left=document.createElement('div'); 
-    left.innerHTML=`<strong>${l.user}</strong> - ${l.route} <div class="mutedSmall">${new Date(l.time).toLocaleString()}</div>`;
-    const right=document.createElement('div'); 
-    const del=document.createElement('button'); del.className='smallBtn'; del.textContent='Delete';
+    const left=document.createElement('div'); left.innerHTML=`<strong>${l.user}</strong> - ${l.route} <div class="mutedSmall">${new Date(l.time).toLocaleString()}</div>`;
+    const right=document.createElement('div'); const del=document.createElement('button'); del.className='smallBtn'; del.textContent='Delete';
     del.addEventListener('click', ()=>{ if(!confirm('Delete this log?')) return; LOGS.splice(idx,1); saveLogs(LOGS); populateLogs(); });
     right.appendChild(del); wrap.appendChild(left); wrap.appendChild(right); logsList.appendChild(wrap);
   });
@@ -319,8 +486,7 @@ function populateAdminRoutes(){
   Object.keys(ROUTES).sort().forEach(n=>{
     const div=document.createElement('div'); div.style.display='flex'; div.style.justifyContent='space-between'; div.style.alignItems='center'; div.style.marginBottom='8px';
     const left=document.createElement('div'); left.innerHTML=`<strong>${n}</strong> <div class="mutedSmall">${ROUTES[n].freq} min — ${ROUTES[n].stops.length} stops</div>`;
-    const right=document.createElement('div'); 
-    const delBtn=document.createElement('button'); delBtn.className='smallBtn'; delBtn.textContent='Delete';
+    const right=document.createElement('div'); const delBtn=document.createElement('button'); delBtn.className='smallBtn'; delBtn.textContent='Delete';
     delBtn.addEventListener('click', ()=>{ if(!confirm(`Delete route "${n}" and reverse?`)) return; deleteRouteAndReverse(n); populateAdminRoutes(); populateRoutesSelect(); });
     right.appendChild(delBtn); div.appendChild(left); div.appendChild(right); routesList.appendChild(div);
   });
@@ -331,7 +497,7 @@ addRouteBtn.addEventListener('click', ()=>{
   const freq = parseInt(newRouteFreq.value.trim());
   const stops = newRouteStops.value.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
   if(!name || !freq || stops.length<2){ alert('Fill name, freq and at least 2 stops'); return; }
-  ROUTES[name]={freq,stops};
+  ROUTES[name]={freq,stops}; // add reverse automatically
   ROUTES[name+' 2']={freq,stops:[...stops].reverse()};
   saveRoutes(ROUTES); populateAdminRoutes(); populateRoutesSelect();
   newRouteName.value=''; newRouteFreq.value=''; newRouteStops.value='';
@@ -339,13 +505,8 @@ addRouteBtn.addEventListener('click', ()=>{
 
 refreshRoutesBtn.addEventListener('click', populateAdminRoutes);
 clearLogsBtn.addEventListener('click', ()=>{ if(confirm('Clear all logs?')){ LOGS=[]; saveLogs(LOGS); populateLogs(); } });
-exportLogsBtn.addEventListener('click', ()=>{
-  const data=JSON.stringify(LOGS,null,2); 
-  const blob=new Blob([data],{type:'application/json'}); 
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='shift_logs.json'; a.click(); 
-  URL.revokeObjectURL(url); 
-});
+exportLogsBtn.addEventListener('click', ()=>{ const data=JSON.stringify(LOGS,null,2); const blob=new Blob([data],{type:'application/json'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='shift_logs.json'; a.click(); URL.revokeObjectURL(url); });
 
 function deleteRouteAndReverse(name){
   delete ROUTES[name];
@@ -354,3 +515,6 @@ function deleteRouteAndReverse(name){
   saveRoutes(ROUTES);
 }
 </script>
+
+</body>
+</html>
