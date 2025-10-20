@@ -428,18 +428,68 @@ function loadSelectedRoute(){
 /* -------------------------
    Dynamic Timetable Render
 ------------------------- */
-function renderDynamicTimetable(route, departTime){
-  tableBody.innerHTML='';
-  route.stops.forEach((stop,i)=>{
-    const tr=document.createElement('tr');
-    const tdStop=document.createElement('td'); tdStop.textContent=stop.name||stop;
-    const tdTime=document.createElement('td');
-    const arrival = departTime ? new Date(departTime.getTime()+i*60000) : '--:--';
-    tdTime.textContent = departTime? formatTime(arrival): '--:--';
-    tr.appendChild(tdStop); tr.appendChild(tdTime);
+let scheduledDeparture = null;
+
+function renderDynamicTimetable(route, departTime) {
+  tableBody.innerHTML = '';
+  if (!route) return;
+
+  // Set scheduled departure (used to compare when user departs)
+  scheduledDeparture = getNextDeparture(new Date(), route.freq);
+
+  // Use either actual depart time or scheduled time for display
+  const baseTime = departTime || scheduledDeparture;
+
+  route.stops.forEach((stop, i) => {
+    const tr = document.createElement('tr');
+    const tdStop = document.createElement('td');
+    const tdTime = document.createElement('td');
+
+    tdStop.textContent = stop.name || stop;
+    const arrival = new Date(baseTime.getTime() + (stop.offset || i) * 60000);
+    tdTime.textContent = formatTime(arrival);
+
+    tr.appendChild(tdStop);
+    tr.appendChild(tdTime);
     tableBody.appendChild(tr);
   });
 }
+
+  departBtn.addEventListener("click", () => {
+  if (!selectedRoute) return alert("Select a route first!");
+
+  const actualDepart = new Date();
+  const diffMinutes = Math.round((actualDepart - scheduledDeparture) / 60000);
+
+  // rebuild timetable adjusted for real departure
+  tableBody.innerHTML = "";
+  selectedRoute.stops.forEach((stop, i) => {
+    const tr = document.createElement("tr");
+    const tdStop = document.createElement("td");
+    const tdTime = document.createElement("td");
+
+    tdStop.textContent = stop.name;
+    const adjusted = new Date(actualDepart.getTime() + (stop.offset || i) * 60000);
+    const timeText = formatTime(adjusted);
+
+    // show late/early indicator
+    let lateTag = "";
+    if (diffMinutes > 0) lateTag = ` <span style="color:red;font-size:0.9em;">+${diffMinutes}</span>`;
+    else if (diffMinutes < 0) lateTag = ` <span style="color:green;font-size:0.9em;">${diffMinutes}</span>`;
+
+    tdTime.innerHTML = timeText + lateTag;
+    tr.append(tdStop, tdTime);
+    tableBody.appendChild(tr);
+  });
+
+  // ✅ Log and send to Discord
+  const entry = { user: CURRENT_USER, route: selectedRouteName, departTime: actualDepart.toISOString() };
+  LOGS.unshift(entry);
+  saveLogs(LOGS);
+  sendShiftLogToDiscord(entry.user, entry.route, entry.departTime);
+  alert("Shift logged and timetable adjusted!");
+});
+
 
 /* -------------------------
    Next Departure Countdown
@@ -558,4 +608,5 @@ function deleteRouteAndReverse(name){
 
 </body>
 </html>
+
 
