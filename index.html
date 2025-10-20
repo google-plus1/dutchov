@@ -95,6 +95,7 @@ const lines = {
   "Event Shuttle": { freq:15, stops:[{name:"Spawn",offset:0},{name:"Event Center",offset:4}] }
 };
 
+// DOM Elements
 const loginCard=document.getElementById("loginCard");
 const busCard=document.getElementById("busCard");
 const timetableCard=document.getElementById("timetableCard");
@@ -119,15 +120,14 @@ const nextBtn=document.getElementById("nextBtn");
 const endBtn=document.getElementById("endBtn");
 const statusDiv=document.getElementById("status");
 
+// State
 let selectedLine=null;
 let currentStopIndex=0;
 let expectedTime=null;
 let timerInterval=null;
-
-// Store active drivers
 let activeDrivers=[];
 
-// LOGIN
+// ===== LOGIN =====
 loginBtn.addEventListener("click",()=>{
   const username=usernameEl.value;
   const password=passwordEl.value;
@@ -141,7 +141,6 @@ loginBtn.addEventListener("click",()=>{
   } else loginMsg.textContent="Invalid username or password!";
 });
 
-// Add driver to active list
 function addActiveDriver(username){
   if(!activeDrivers.includes(username)) activeDrivers.push(username);
   updateActiveDrivers();
@@ -156,7 +155,7 @@ function updateActiveDrivers(){
   activeDriversDiv.style.display="block";
 }
 
-// BUS UI
+// ===== BUS UI =====
 function initBusUI(){
   select.innerHTML="";
   for(let name in lines){
@@ -177,7 +176,7 @@ function initBusUI(){
   updateTime();
 }
 
-// TIME HELPERS
+// ===== TIME HELPERS =====
 function getNextDeparture(now,freq){
   const mins=now.getMinutes();
   const rem=mins%freq;
@@ -189,9 +188,26 @@ function getNextDeparture(now,freq){
 }
 function formatTime(date){ return date.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
 
-// TIMETABLE
+// ===== TIMETABLE =====
 function generateTimetable(line){
   tableBody.innerHTML="";
-  if(!line) return;
   const nextDeparture=getNextDeparture(new Date(),line.freq);
-  line.stops.forEach(stop
+  line.stops.forEach(stop=>{
+    const tr=document.createElement("tr");
+    const tdStop=document.createElement("td");
+    const tdTime=document.createElement("td");
+    tdStop.textContent=stop.name;
+    const arrival=new Date(nextDeparture.getTime()+stop.offset*60000);
+    tdTime.textContent=formatTime(arrival);
+    tr.append(tdStop, tdTime);
+    tableBody.appendChild(tr);
+  });
+}
+
+// ===== LIVE TIME & COUNTDOWN =====
+function updateTime(){
+  const now=new Date();
+  currentTimeEl.textContent=now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+ 
+
+
