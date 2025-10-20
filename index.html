@@ -58,7 +58,6 @@ th { background:#e43f5a; color:white; border-radius:8px; }
     <div class="info"><span>Next Departure:</span><br><span id="nextDeparture" class="big"></span></div>
     <div class="info"><span>Countdown:</span><br><span id="countdown" class="big"></span></div>
 
-    <!-- Station buttons -->
     <div id="stationControls" style="display:none;">
       <button id="departBtn">Depart</button>
       <button id="nextBtn">Next Station</button>
@@ -84,10 +83,10 @@ th { background:#e43f5a; color:white; border-radius:8px; }
 </div>
 
 <script>
-// === USERS DATABASE ===
+// ===== USERS DATABASE =====
 const users = { "pwatg123":"utrechtov20092025", "Roidky":"Mohamed4obai", "driver":"pass123" };
 
-// === BUS LINES ===
+// ===== BUS LINES =====
 const lines = {
   "Line A": { freq:10, stops:[{name:"Spawn",offset:0},{name:"Brandweer Kazerene",offset:1},{name:"Independence Parkway",offset:2},{name:"Centraal Station",offset:3},{name:"Maple Valley Farms",offset:4},{name:"Highrock Park",offset:5}] },
   "Line B": { freq:15, stops:[{name:"Central Park",offset:0},{name:"Ouchard Boulevard",offset:1},{name:"Ouchard Boulevard 2",offset:2},{name:"Independence Parkway",offset:3},{name:"Medical Way",offset:4},{name:"Maple Valley Farms",offset:5},{name:"Highrock Park",offset:6}] },
@@ -95,7 +94,7 @@ const lines = {
   "Event Shuttle": { freq:15, stops:[{name:"Spawn",offset:0},{name:"Event Center",offset:4}] }
 };
 
-// DOM Elements
+// ===== DOM ELEMENTS =====
 const loginCard=document.getElementById("loginCard");
 const busCard=document.getElementById("busCard");
 const timetableCard=document.getElementById("timetableCard");
@@ -120,14 +119,14 @@ const nextBtn=document.getElementById("nextBtn");
 const endBtn=document.getElementById("endBtn");
 const statusDiv=document.getElementById("status");
 
-// State
+// ===== STATE =====
 let selectedLine=null;
 let currentStopIndex=0;
 let expectedTime=null;
-let timerInterval=null;
 let activeDrivers=[];
+let freqTimer=null;
 
-// ===== LOGIN =====
+// ===== LOGIN HANDLER =====
 loginBtn.addEventListener("click",()=>{
   const username=usernameEl.value;
   const password=passwordEl.value;
@@ -207,7 +206,45 @@ function generateTimetable(line){
 // ===== LIVE TIME & COUNTDOWN =====
 function updateTime(){
   const now=new Date();
-  currentTimeEl.textContent=now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
- 
+  currentTimeEl.textContent = now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  if(!selectedLine){
+    nextDepartureEl.textContent="--:--";
+    countdownEl.textContent="Select a line";
+    return;
+  }
+  const freq=selectedLine.freq;
+  const next=getNextDeparture(now,freq);
+  const diff=next-now;
+  const mins=Math.floor(diff/60000);
+  const secs=Math.floor((diff%60000)/1000);
+  nextDepartureEl.textContent=formatTime(next);
+  countdownEl.textContent=`${mins}m ${secs}s`;
+}
 
+// ===== STATION CONTROLS =====
+departBtn.addEventListener("click",()=>{
+  if(!selectedLine) return;
+  currentStopIndex=0;
+  const now=new Date();
+  expectedTime=new Date(now.getTime() + selectedLine.stops[currentStopIndex].offset*60000);
+  statusDiv.textContent=`Departed: ${selectedLine.stops[currentStopIndex].name}`;
+});
 
+nextBtn.addEventListener("click",()=>{
+  if(!selectedLine || currentStopIndex>=selectedLine.stops.length-1) return;
+  const now=new Date();
+  currentStopIndex++;
+  const stop = selectedLine.stops[currentStopIndex];
+  const diff = (now - (expectedTime||now))/1000; // seconds
+  statusDiv.textContent=`${stop.name} - ${diff>0 ? "Late":"On Time"} (${Math.abs(Math.floor(diff))}s)`;
+  expectedTime=new Date(now.getTime() + 60000); // assume 1 min per stop
+});
+
+endBtn.addEventListener("click",()=>{
+  if(!selectedLine) return;
+  statusDiv.textContent="Route Completed!";
+  currentStopIndex=0;
+});
+</script>
+</body>
+</html>
