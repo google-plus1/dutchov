@@ -60,9 +60,9 @@
     <div id="loginSection">
       <h2 style="margin:0 0 8px 0">Login</h2>
       <label>Username</label>
-      <input id="username" placeholder="username (ex: pwatg123)" />
+      <input id="username" placeholder="Username" />
       <label>Password</label>
-      <input id="password" type="password" placeholder="password" />
+      <input id="password" type="password" placeholder="Password" />
       <div style="display:flex;gap:8px;margin-top:8px">
         <button id="loginBtn">Login</button>
         <button id="logoutBtn" style="display:none;background:#6c757d">Logout</button>
@@ -168,17 +168,6 @@
     </div>
 
   </div>
-
-  <!-- right: quick help / info -->
-  <div class="card" style="width:260px">
-    <h3 style="margin:0 0 8px 0">Quick Help</h3>
-    <div class="mutedSmall">
-      - Login as <strong>pwatg123</strong> or <strong>Roidky</strong> to access admin panel.<br>
-      - Drivers can Depart → Next Station (only last 15s before arrival or when late) → End.<br>
-      - Admins can add/delete routes; routes auto-create reverse route.<br>
-      - Shift logs saved to browser storage; admin can delete invalid shifts.
-    </div>
-  </div>
 </div>
 
 <!-- active drivers -->
@@ -188,40 +177,31 @@
 </div>
 
 <script>
-/* -------------------------
-   Storage helpers & init
-   ------------------------- */
+/* --- Storage & defaults --- */
 const STORAGE_ROUTES = 'erlc_routes_v1';
 const STORAGE_LOGS = 'erlc_logs_v1';
 const STORAGE_USERS = 'erlc_users_v1';
 
-// default admin users + drivers
 const defaultUsers = {
   "pwatg123": { pw: "utrechtov20092025", admin:true },
   "Roidky":   { pw: "Mohamed4obai", admin:true },
-  "ilias4real.":   { pw: "OVIlias239", admin:false },
-  "driver":   { pw: "pass123", admin:false },
-  "driver":   { pw: "pass123", admin:false },
   "driver":   { pw: "pass123", admin:false },
 };
 
-// default routes (Central Park used instead of Independence Parkway)
 const defaultRoutes = {
   "Line A": { freq:10, stops:[ "Spawn","Brandweer Kazerene","Central Park","Centraal Station","Maple Valley Farms","Highrock Park" ] },
   "Event Shuttle": { freq:15, stops:[ "Spawn","Event Center" ] },
   "Line B": { freq:15, stops:[ "Central Park","Ouchard Boulevard","Ouchard Boulevard 2","Central Park","Medical Way","Maple Valley Farms","Highrock Park" ] },
   "Line C": { freq:10, stops:[ "Spawn","Chinatown","Fire Department","Central Park","Hospital","Farms","Highrock","Springfield" ] },
   "FastLine": { freq:8, stops:[ "Springfield","River City" ] },
-  "Line D": { freq:10, stops:[ "Spawn","Chinatown","Fire Department","Central Park","Hospital","Farms","Highrock","Springfield" ] } // extra copy
+  "Line D": { freq:10, stops:[ "Spawn","Chinatown","Fire Department","Central Park","Hospital","Farms","Highrock","Springfield" ] }
 };
 
-// save/load routes
-function saveRoutes(routes){ localStorage.setItem(STORAGE_ROUTES, JSON.stringify(routes)); }
+function saveRoutes(routes){ localStorage.setItem(STORAGE_ROUTES, JSON.stringify(routes)); ROUTES = routes; }
 function loadRoutes(){
   const raw = localStorage.getItem(STORAGE_ROUTES);
-  if(!raw){ // initialize defaults and their reverses
+  if(!raw){
     const r = JSON.parse(JSON.stringify(defaultRoutes));
-    // add reverses
     for(const name of Object.keys(defaultRoutes)){
       const revName = name + " 2";
       if(!r[revName]){
@@ -234,7 +214,6 @@ function loadRoutes(){
   return JSON.parse(raw);
 }
 
-// users
 function saveUsers(users){ localStorage.setItem(STORAGE_USERS, JSON.stringify(users)); }
 function loadUsers(){
   const raw = localStorage.getItem(STORAGE_USERS);
@@ -242,48 +221,48 @@ function loadUsers(){
   return JSON.parse(raw);
 }
 
-// logs
-function saveLogs(logs){ localStorage.setItem(STORAGE_LOGS, JSON.stringify(logs)); }
+function saveLogs(logs){ localStorage.setItem(STORAGE_LOGS, JSON.stringify(logs)); LOGS = logs; }
 function loadLogs(){ const raw = localStorage.getItem(STORAGE_LOGS); return raw? JSON.parse(raw): []; }
 
-// initialise storage if empty
+/* --- App state --- */
 let ROUTES = loadRoutes();
 let LOGS = loadLogs();
 let USERS = loadUsers();
+let CURRENT_USER = null;
+let CURRENT_USER_IS_ADMIN = false;
+let selectedRouteName = null;
+let selectedRoute = null;
+let useReverse = false;
+let expectedArrival = null;
+let timerInterval = null;
+let currentStopIndex = 0;
+let activeDrivers = [];
 
-/* -------------------------
-   DOM elements
-   ------------------------- */
+/* --- DOM elements --- */
 const usernameEl = document.getElementById('username');
 const passwordEl = document.getElementById('password');
 const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const loginMsg = document.getElementById('loginMsg');
-
 const driverControls = document.getElementById('driverControls');
 const lineSelect = document.getElementById('lineSelect');
 const confirmBtn = document.getElementById('confirmBtn');
 const reverseBtn = document.getElementById('reverseBtn');
-
 const currentTime = document.getElementById('currentTime');
 const nextDeparture = document.getElementById('nextDeparture');
 const countdown = document.getElementById('countdown');
-
 const stationControls = document.getElementById('stationControls');
 const departBtn = document.getElementById('departBtn');
 const nextBtn = document.getElementById('nextBtn');
 const endBtn = document.getElementById('endBtn');
 const timerDisplay = document.getElementById('timerDisplay');
 const statusDiv = document.getElementById('status');
-
 const timetableCard = document.getElementById('timetableCard');
 const tableTitle = document.getElementById('tableTitle');
 const tableBody = document.getElementById('tableBody');
-
 const activeDriversDiv = document.getElementById('activeDrivers');
 const driversList = document.getElementById('driversList');
 const userBadge = document.getElementById('userBadge');
-
 const adminPanel = document.getElementById('adminPanel');
 const routesList = document.getElementById('routesList');
 const logsList = document.getElementById('logsList');
@@ -296,31 +275,8 @@ const clearLogsBtn = document.getElementById('clearLogsBtn');
 const exportLogsBtn = document.getElementById('exportLogsBtn');
 
 /* -------------------------
-   App state
-   ------------------------- */
-let CURRENT_USER = null;
-let CURRENT_USER_IS_ADMIN = false;
-let selectedRouteName = null;
-let selectedRoute = null;
-let useReverse = false;
-let expectedArrival = null; // Date for current stop expected arrival
-let timerInterval = null;
-
-/* -------------------------
-   Utility helpers
-   ------------------------- */
-function now(){ return new Date(); }
-function formatTime(d){ return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
-function formatDiffSec(s){
-  s = Math.floor(Math.abs(s));
-  const mm = Math.floor(s/60).toString().padStart(2,'0');
-  const ss = (s%60).toString().padStart(2,'0');
-  return `${mm}:${ss}`;
-}
-
-/* -------------------------
-   Login / user handling
-   ------------------------- */
+   Login / Logout
+------------------------- */
 loginBtn.addEventListener('click', () => {
   const u = usernameEl.value.trim();
   const p = passwordEl.value;
@@ -328,7 +284,6 @@ loginBtn.addEventListener('click', () => {
   if(!u || !p){ loginMsg.textContent = 'Enter username & password'; return; }
   const userRecord = USERS[u];
   if(!userRecord || userRecord.pw !== p){ loginMsg.textContent = 'Invalid username or password'; return; }
-  // success
   CURRENT_USER = u;
   CURRENT_USER_IS_ADMIN = !!userRecord.admin;
   loginMsg.textContent = '';
@@ -354,9 +309,7 @@ logoutBtn.addEventListener('click', ()=> {
   userBadge.style.display='none';
 });
 
-/* -------------------------
-   Active drivers
-   ------------------------- */
+/* --- Active drivers --- */
 function addActiveDriver(name){
   if(!name) return;
   if(!activeDrivers.includes(name)) activeDrivers.push(name);
@@ -371,8 +324,8 @@ function renderActiveDrivers(){
 }
 
 /* -------------------------
-   Routes select & timetable
-   ------------------------- */
+   Routes / Timetable
+------------------------- */
 function populateRoutesSelect(){
   lineSelect.innerHTML='';
   const names = Object.keys(ROUTES).sort();
@@ -381,8 +334,7 @@ function populateRoutesSelect(){
     opt.value = n; opt.textContent = n;
     lineSelect.appendChild(opt);
   });
-  // preselect first
-  if(names.length) { lineSelect.value = names[0]; }
+  if(names.length) lineSelect.value = names[0];
 }
 
 confirmBtn.addEventListener('click', ()=> {
@@ -400,7 +352,6 @@ function loadSelectedRoute(){
   if(!selectedRouteName) return;
   const name = selectedRouteName;
   selectedRoute = ROUTES[name];
-  // if reverse toggle requested, find the reverse route (name + " 2")
   let displayName = name;
   if(useReverse){
     const revName = name.endsWith(' 2')? name.replace(/ 2$/, '') : (name + ' 2');
@@ -411,14 +362,12 @@ function loadSelectedRoute(){
   renderTimetable(selectedRoute);
   timetableCard.style.display='block';
   stationControls.style.display='block';
-  // reset station timer state
   clearTimer();
   timerDisplay.textContent='--:--';
   timerDisplay.style.background='var(--good)';
   statusDiv.textContent='';
 }
 
-/* timetable render */
 function renderTimetable(route){
   tableBody.innerHTML='';
   const nextDep = getNextDeparture(new Date(), route.freq);
@@ -433,9 +382,6 @@ function renderTimetable(route){
   }
 }
 
-/* -------------------------
-   next departure calculation
-   ------------------------- */
 function getNextDeparture(now, freq){
   const mins = now.getMinutes();
   const rem = mins % freq;
@@ -446,9 +392,6 @@ function getNextDeparture(now, freq){
   return next;
 }
 
-/* -------------------------
-   realtime UI updates
-   ------------------------- */
 setInterval(()=>{
   const n = new Date();
   currentTime.textContent = n.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -456,22 +399,22 @@ setInterval(()=>{
     const next = getNextDeparture(n, selectedRoute.freq);
     nextDeparture.textContent = formatTime(next);
     const diff = Math.ceil((next - n)/1000);
-    if(diff>0){
-      countdown.textContent = `${Math.floor(diff/60)}m ${diff%60}s`;
-    } else {
-      countdown.textContent = '0m 0s';
-    }
+    countdown.textContent = diff>0 ? `${Math.floor(diff/60)}m ${diff%60}s` : '0m 0s';
   }
-}, 1000);
+},1000);
 
-/* -------------------------
-   STATION timer logic
-   ------------------------- */
+function formatTime(d){ return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
+function formatDiffSec(s){
+  s = Math.floor(Math.abs(s));
+  const mm = Math.floor(s/60).toString().padStart(2,'0');
+  const ss = (s%60).toString().padStart(2,'0');
+  return `${mm}:${ss}`;
+}
+
+/* --- Station timers --- */
 departBtn.addEventListener('click', ()=> {
   if(!selectedRoute) { alert('Load a route first'); return; }
-  // log shift
   logShift(CURRENT_USER, tableTitle.textContent || lineSelect.value);
-  // start first stop timer: expected arrival = now + offset(current stop)
   currentStopIndex = 0;
   startStopTimerForIndex(currentStopIndex);
   statusDiv.textContent = `Departed: ${selectedRoute.stops[currentStopIndex].name || selectedRoute.stops[currentStopIndex]}`;
@@ -479,29 +422,19 @@ departBtn.addEventListener('click', ()=> {
 
 nextBtn.addEventListener('click', ()=> {
   if(!selectedRoute) return;
-  // check allowed window: remainingSeconds <=15 OR already late
   const secRemaining = Math.ceil((expectedArrival - new Date())/1000);
   if(secRemaining > 15 && (expectedArrival - new Date()) > 0){
-    // blocked: clicking too early
     statusDiv.textContent = `You can click Next Station only in the last 15s before arrival. (${secRemaining}s left)`;
     return;
   }
-  // evaluate on-time or late
-  const diff = Math.floor((new Date() - expectedArrival)/1000); // seconds: positive => late
+  const diff = Math.floor((new Date() - expectedArrival)/1000);
   if(diff <= 0){
-    // on time
     statusDiv.innerHTML = `<span class="ok">On Time ✅</span> &nbsp;(${formatDiffSec(Math.abs(diff))})`;
   } else {
-    // late
     statusDiv.innerHTML = `<span class="danger">Late ❌</span> &nbsp;(-${formatDiffSec(diff)})`;
   }
-  // advance index
   currentStopIndex++;
-  if(currentStopIndex >= selectedRoute.stops.length){
-    // route ended
-    endRoute();
-    return;
-  }
+  if(currentStopIndex >= selectedRoute.stops.length){ endRoute(); return; }
   startStopTimerForIndex(currentStopIndex);
 });
 
@@ -509,29 +442,22 @@ endBtn.addEventListener('click', ()=> { endRoute(); });
 
 function startStopTimerForIndex(index){
   clearTimer();
-  const now = new Date();
-  // expected arrival: now + 1 minute per stop difference from current stop offset
-  // we define each stop travel time as 1 minute between stops (offsets already set at creation)
-  expectedArrival = new Date(now.getTime() + 60000); // 1 minute for next station
-  updateTimerDisplay(); // immediate
-  timerInterval = setInterval(updateTimerDisplay, 1000);
-  // enable/disable next button according to window in updateTimerDisplay
+  expectedArrival = new Date(new Date().getTime() + 60000);
+  updateTimerDisplay();
+  timerInterval = setInterval(updateTimerDisplay,1000);
 }
 
 function updateTimerDisplay(){
   if(!expectedArrival){ timerDisplay.textContent='--:--'; return; }
   const diffSec = Math.ceil((expectedArrival - new Date())/1000);
   if(diffSec > 0){
-    // still positive -> countdown, green
     timerDisplay.style.background = 'var(--good)';
     timerDisplay.textContent = formatDiffSec(diffSec);
-    // Next allowed only if <= 15 seconds before arrival (i.e., diffSec <= 15)
     nextBtn.disabled = diffSec > 15;
   } else {
-    // late -> red and counting up with minus
     timerDisplay.style.background = 'var(--bad)';
     timerDisplay.textContent = '-' + formatDiffSec(Math.abs(diffSec));
-    nextBtn.disabled = false; // allowed when late
+    nextBtn.disabled = false;
   }
 }
 
@@ -545,14 +471,12 @@ function clearTimer(){
 function endRoute(){
   clearTimer();
   statusDiv.textContent = 'Route completed!';
-  timerDisplay.textContent = '--:--';
-  timerDisplay.style.background = 'var(--good)';
+  timerDisplay.textContent='--:--';
+  timerDisplay.style.background='var(--good)';
   currentStopIndex = 0;
 }
 
-/* -------------------------
-   Shift logs (depart) - admins view
-   ------------------------- */
+/* --- Shift logs --- */
 function logShift(user, routeName){
   const entry = { user, route: routeName, time: new Date().toISOString() };
   LOGS.unshift(entry);
@@ -577,9 +501,7 @@ function populateLogs(){
   });
 }
 
-/* -------------------------
-   Admin: routes management
-   ------------------------- */
+/* --- Admin routes --- */
 function populateAdminRoutes(){
   routesList.innerHTML = '';
   const names = Object.keys(ROUTES).sort();
@@ -599,7 +521,6 @@ function populateAdminRoutes(){
   });
 }
 
-/* Create reverse name helper */
 function reverseName(name){ return name.endsWith(' 2')? name.replace(/ 2$/,'') : (name + ' 2'); }
 
 function deleteRouteAndReverse(name){
@@ -614,16 +535,10 @@ addRouteBtn.addEventListener('click', ()=>{
   const name = newRouteName.value.trim();
   const freq = parseInt(newRouteFreq.value,10) || 10;
   const stopsRaw = newRouteStops.value.trim();
-  if(!name || !stopsRaw){
-    alert('Provide route name and stops.');
-    return;
-  }
-  // parse stops: split by newline or comma
+  if(!name || !stopsRaw){ alert('Provide route name and stops.'); return; }
   const arr = stopsRaw.split(/\r?\n|,/).map(s=>s.trim()).filter(Boolean);
-  // create stops with offsets increasing by 1 per stop (each 1 minute)
   const stopsObj = arr.map((s,i)=> ({name:s, offset:i}) );
   ROUTES[name] = { freq, stops: stopsObj };
-  // create reverse
   const revName = name + ' 2';
   if(!ROUTES[revName]){
     const revStops = [...stopsObj].slice().reverse().map((s,i)=> ({ name: s.name, offset: i }));
@@ -635,56 +550,18 @@ addRouteBtn.addEventListener('click', ()=>{
   newRouteName.value=''; newRouteFreq.value=''; newRouteStops.value='';
 });
 
-/* refresh routes list button */
-refreshRoutesBtn.addEventListener('click', ()=>{
-  ROUTES = loadRoutes();
-  populateAdminRoutes();
-  populateRoutesSelect();
-});
+refreshRoutesBtn.addEventListener('click', ()=> { populateAdminRoutes(); populateRoutesSelect(); });
 
-/* clear logs */
-clearLogsBtn.addEventListener('click', ()=> {
+clearLogsBtn.addEventListener('click', ()=>{
   if(!confirm('Clear all logs?')) return;
-  LOGS = []; saveLogs(LOGS); populateLogs();
+  LOGS=[]; saveLogs(LOGS); populateLogs();
 });
 
-/* export logs */
 exportLogsBtn.addEventListener('click', ()=>{
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(LOGS,null,2));
-  const a = document.createElement('a'); a.href = dataStr; a.download = 'erlc_logs.json'; a.click();
+  const dl = document.createElement('a'); dl.setAttribute('href',dataStr); dl.setAttribute('download','shift_logs.json'); dl.click();
 });
-
-/* -------------------------
-   Persist helpers
-   ------------------------- */
-function saveRoutes(routes){ localStorage.setItem(STORAGE_ROUTES, JSON.stringify(routes)); ROUTES = routes; }
-function saveLogs(l){ localStorage.setItem(STORAGE_LOGS, JSON.stringify(l)); LOGS = l; }
-
-/* helpers to ensure routes object has stops with offset numbers */
-function normalizeRoutesInStorage(){
-  let changed=false;
-  for(const k of Object.keys(ROUTES)){
-    const r = ROUTES[k];
-    if(Array.isArray(r.stops) && r.stops.length && typeof r.stops[0] === 'string'){
-      // convert to {name,offset}
-      r.stops = r.stops.map((s,i)=> ({name:s, offset:i}));
-      changed=true;
-    }
-  }
-  if(changed) saveRoutes(ROUTES);
-}
-
-// initial normalization
-normalizeRoutesInStorage();
-populateRoutesSelect();
-
-/* populate admin lists if logged in as admin already (unlikely) */
-if(CURRENT_USER_IS_ADMIN){ populateAdminRoutes(); populateLogs(); }
-
-/* expose global for debugging (optional) */
-// window.ROUTES = ROUTES; window.LOGS = LOGS; window.USERS = USERS;
-
 </script>
+
 </body>
 </html>
-
