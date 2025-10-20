@@ -99,6 +99,7 @@ th{color:#fff;background:linear-gradient(90deg,var(--accent),#ff907a);border-rad
         </div>
         <div id="timerDisplay" class="timer" style="margin-top:10px;background:var(--good)">--:--</div>
         <div id="status" class="status mutedSmall"></div>
+        <div id="currentStation" class="mutedSmall" style="margin-top:4px">Current Station: --</div>
         <div style="margin-top:8px" class="mutedSmall">*Next Station button only in last 15s before arrival or when late.</div>
       </div>
     </div>
@@ -386,6 +387,15 @@ function populateRoutesSelect(){
   if(names.length) lineSelect.value=names[0];
 }
 
+function updateCurrentStationDisplay() {
+    if (!selectedRoute || currentStopIndex >= selectedRoute.stops.length || currentStopIndex < 0) {
+        document.getElementById('currentStation').textContent = "Current Station: --";
+        return;
+    }
+    document.getElementById('currentStation').textContent = "Current Station: " + selectedRoute.stops[currentStopIndex];
+}
+
+  
 confirmBtn.addEventListener('click', ()=>{ selectedRouteName = lineSelect.value; useReverse=false; loadSelectedRoute(); });
 reverseBtn.addEventListener('click', ()=>{
   if(!selectedRouteName) return;
@@ -468,6 +478,8 @@ departBtn.addEventListener('click', ()=>{
   renderDynamicTimetable(selectedRoute, actualDepartureTime);
   startStopTimerForIndex(currentStopIndex);
   statusDiv.textContent = `Departed: ${selectedRoute.stops[currentStopIndex].name}`;
+  updateCurrentStationDisplay(); // show first station
+
 });
 
 nextBtn.addEventListener('click', ()=>{
@@ -481,6 +493,7 @@ nextBtn.addEventListener('click', ()=>{
   currentStopIndex++;
   if(currentStopIndex>=selectedRoute.stops.length){ endRoute(); return; }
   startStopTimerForIndex(currentStopIndex);
+  updateCurrentStationDisplay(); // ✅ update station
 });
 
 endBtn.addEventListener('click', endRoute);
@@ -503,7 +516,8 @@ function updateTimerDisplay(){
 
 function clearTimer(){ if(timerInterval) clearInterval(timerInterval); timerInterval=null; timerDisplay.textContent='--:--'; nextBtn.disabled=true; }
 
-function endRoute(){ clearTimer(); statusDiv.textContent='Route completed!'; currentStopIndex=0; actualDepartureTime=null; renderDynamicTimetable(selectedRoute, null); }
+function endRoute(){ clearTimer(); statusDiv.textContent='Route completed!'; currentStopIndex=0; actualDepartureTime=null; renderDynamicTimetable(selectedRoute, null); updateCurrentStationDisplay(); // reset to --
+ }
 
 /* -------------------------
    Shift Logs
@@ -567,4 +581,5 @@ function deleteRouteAndReverse(name){
 
 </body>
 </html>
+
 
