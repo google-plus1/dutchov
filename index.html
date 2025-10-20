@@ -32,6 +32,17 @@ th { background:#e43f5a; color:white; border-radius:8px; }
 #activeDrivers h3 { margin:0 0 10px 0; font-size:18px; color:#f7b32b; }
 #stationControls button { margin:5px; }
 #status { margin-top:10px; font-weight:bold; }
+#timerDisplay {
+  margin-top:10px;
+  font-size:24px;
+  padding:8px 16px;
+  border-radius:8px;
+  background:#1cc88a;
+  color:#fff;
+  min-width:100px;
+  text-align:center;
+  transition:background 0.3s;
+}
 </style>
 </head>
 <body>
@@ -62,6 +73,7 @@ th { background:#e43f5a; color:white; border-radius:8px; }
       <button id="departBtn">Depart</button>
       <button id="nextBtn">Next Station</button>
       <button id="endBtn">End</button>
+      <div id="timerDisplay">--:--</div>
       <div id="status"></div>
     </div>
   </div>
@@ -83,7 +95,7 @@ th { background:#e43f5a; color:white; border-radius:8px; }
 </div>
 
 <script>
-// ===== USERS DATABASE =====
+// ===== USERS =====
 const users = { "pwatg123":"utrechtov20092025", "Roidky":"Mohamed4obai", "driver":"pass123" };
 
 // ===== BUS LINES =====
@@ -110,22 +122,25 @@ const countdownEl=document.getElementById("countdown");
 const tableBody=document.getElementById("tableBody");
 const tableTitle=document.getElementById("tableTitle");
 
-const activeDriversDiv=document.getElementById("activeDrivers");
-const driversList=document.getElementById("driversList");
-
 const stationControls=document.getElementById("stationControls");
 const departBtn=document.getElementById("departBtn");
 const nextBtn=document.getElementById("nextBtn");
 const endBtn=document.getElementById("endBtn");
+const timerDisplay=document.getElementById("timerDisplay");
 const statusDiv=document.getElementById("status");
+
+const activeDriversDiv=document.getElementById("activeDrivers");
+const driversList=document.getElementById("driversList");
 
 // ===== STATE =====
 let selectedLine=null;
 let currentStopIndex=0;
 let expectedTime=null;
+let timerInterval=null;
+let countingDown=true;
 let activeDrivers=[];
 
-// ===== LOGIN HANDLER =====
+// ===== LOGIN =====
 loginBtn.addEventListener("click",()=>{
   const username=usernameEl.value;
   const password=passwordEl.value;
@@ -133,7 +148,6 @@ loginBtn.addEventListener("click",()=>{
     loginCard.style.display="none";
     busCard.style.display="block";
     timetableCard.style.display="block";
-    loginMsg.textContent="";
     addActiveDriver(username);
     initBusUI();
   } else loginMsg.textContent="Invalid username or password!";
@@ -141,13 +155,10 @@ loginBtn.addEventListener("click",()=>{
 
 function addActiveDriver(username){
   if(!activeDrivers.includes(username)) activeDrivers.push(username);
-  updateActiveDrivers();
-}
-function updateActiveDrivers(){
   driversList.innerHTML="";
-  activeDrivers.forEach(d=>{
+  activeDrivers.forEach(u=>{
     const li=document.createElement("li");
-    li.textContent=d;
+    li.textContent=u;
     driversList.appendChild(li);
   });
   activeDriversDiv.style.display="block";
@@ -169,12 +180,13 @@ function initBusUI(){
     currentStopIndex=0;
     stationControls.style.display="block";
     statusDiv.textContent="";
+    timerDisplay.textContent="--:--";
+    timerDisplay.style.background="#1cc88a";
   });
   setInterval(updateTime,1000);
   updateTime();
 }
 
-// ===== TIME HELPERS =====
 function getNextDeparture(now,freq){
   const mins=now.getMinutes();
   const rem=mins%freq;
@@ -186,7 +198,6 @@ function getNextDeparture(now,freq){
 }
 function formatTime(date){ return date.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
 
-// ===== TIMETABLE =====
 function generateTimetable(line){
   tableBody.innerHTML="";
   const nextDeparture=getNextDeparture(new Date(),line.freq);
@@ -202,7 +213,6 @@ function generateTimetable(line){
   });
 }
 
-// ===== LIVE TIME & COUNTDOWN =====
 function updateTime(){
   const now=new Date();
   currentTimeEl.textContent = now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -220,30 +230,62 @@ function updateTime(){
   countdownEl.textContent=`${mins}m ${secs}s`;
 }
 
-// ===== STATION CONTROLS =====
+// ===== TIMER / STATIONS =====
 departBtn.addEventListener("click",()=>{
   if(!selectedLine) return;
   currentStopIndex=0;
-  const now=new Date();
-  expectedTime=new Date(now.getTime() + selectedLine.stops[currentStopIndex].offset*60000);
+  startStopTimer();
   statusDiv.textContent=`Departed: ${selectedLine.stops[currentStopIndex].name}`;
 });
 
 nextBtn.addEventListener("click",()=>{
   if(!selectedLine || currentStopIndex>=selectedLine.stops.length-1) return;
-  const now=new Date();
+  clearInterval(timerInterval);
+  const timeDiff=(expectedTime - new Date())/1000;
+  if(timeDiff>0){
+    statusDiv.textContent="On Time ✅";
+  } else {
+    statusDiv.textContent="Late ❌";
+  }
   currentStopIndex++;
-  const stop = selectedLine.stops[currentStopIndex];
-  const diff = (now - (expectedTime||now))/1000; // seconds
-  statusDiv.textContent=`${stop.name} - ${diff>0 ? "Late":"On Time"} (${Math.abs(Math.floor(diff))}s)`;
-  expectedTime=new Date(now.getTime() + 60000); // assume 1 min per stop
+  startStopTimer();
 });
 
 endBtn.addEventListener("click",()=>{
-  if(!selectedLine) return;
+  clearInterval(timerInterval);
   statusDiv.textContent="Route Completed!";
-  currentStopIndex=0;
+  timerDisplay.textContent="--:--";
+  timerDisplay.style.background="#1cc88a";
 });
+
+function startStopTimer(){
+  clearInterval(timerInterval);
+  const now=new Date();
+  expectedTime=new Date(now.getTime()+60000); // each stop = 1 min
+  countingDown=true;
+  updateTimer();
+  timerInterval=setInterval(updateTimer,1000);
+}
+
+function updateTimer(){
+  const now=new Date();
+  let diff=(expectedTime-now)/1000;
+  if(diff>0){
+    // still on time
+    timerDisplay.style.background="#1cc88a";
+    timerDisplay.textContent=formatDiff(diff);
+  } else {
+    // late
+    timerDisplay.style.background="#e43f5a";
+    timerDisplay.textContent=`-${formatDiff(Math.abs(diff))}`;
+  }
+}
+
+function formatDiff(sec){
+  const m=Math.floor(sec/60);
+  const s=Math.floor(sec%60);
+  return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+}
 </script>
 </body>
 </html>
