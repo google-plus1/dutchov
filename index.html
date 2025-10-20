@@ -192,6 +192,30 @@ const defaultUsers = {
   "driver":   { pw: "pass123", admin:false }
 };
 
+  const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1429903434366193734/DRdYl52p-VEVzDjyxgwxrzZR3zZvZUy-oxMAR9C82YF67iMemQdddDIu71gKl0veKdtM";
+
+function sendShiftLogToDiscord(username, routeName, departTime) {
+  const message = {
+    embeds: [{
+      title: "🚌 New Shift Started",
+      color: 0x00ff00,
+      fields: [
+        { name: "Driver", value: username, inline: true },
+        { name: "Route", value: routeName, inline: true },
+        { name: "Departed At", value: new Date(departTime).toLocaleString(), inline: false }
+      ],
+      timestamp: new Date().toISOString()
+    }]
+  };
+
+  fetch(DISCORD_WEBHOOK_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(message)
+  }).catch(err => console.error("Discord log failed:", err));
+}
+
+
 // default routes
 const defaultRoutes = {
   "Line A": { freq:10, stops:[ "Spawn","Chinatown","Central Park","Highrock" ] },
@@ -401,6 +425,31 @@ function renderDynamicTimetable(route, departTime){
   });
 }
 
+function populateLogs() {
+  logsList.innerHTML = '';
+  if (!LOGS.length) { logsList.textContent = 'No shift logs yet'; return; }
+  
+  LOGS.forEach((l, idx) => {
+    const div = document.createElement('div');
+    div.className = 'logItem';
+    div.innerHTML = `<strong>${l.user}</strong> - ${l.route} <div class="mutedSmall">${(new Date(l.departTime)).toLocaleString()}</div>`;
+    
+    const delBtn = document.createElement('button');
+    delBtn.className = 'smallBtn';
+    delBtn.textContent = 'Delete';
+    delBtn.addEventListener('click', () => {
+      if (!confirm('Delete this log?')) return;
+      LOGS.splice(idx, 1);
+      saveLogs(LOGS);
+      populateLogs();
+    });
+    
+    div.appendChild(delBtn);
+    logsList.appendChild(div);
+  });
+}
+
+  
 /* -------------------------
    Next Departure Countdown
 ------------------------- */
@@ -518,3 +567,4 @@ function deleteRouteAndReverse(name){
 
 </body>
 </html>
+
