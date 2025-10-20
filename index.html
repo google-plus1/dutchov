@@ -192,6 +192,30 @@ const defaultUsers = {
   "driver":   { pw: "pass123", admin:false }
 };
 
+  const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1429903434366193734/DRdYl52p-VEVzDjyxgwxrzZR3zZvZUy-oxMAR9C82YF67iMemQdddDIu71gKl0veKdtM"; 
+
+function sendShiftLogToDiscord(username, routeName, departTime) {
+  const message = {
+    embeds: [{
+      title: "🚌 New Shift Started",
+      color: 0x00ff00,
+      fields: [
+        { name: "Driver", value: username, inline: true },
+        { name: "Route", value: routeName, inline: true },
+        { name: "Departed At", value: new Date(departTime).toLocaleString(), inline: false }
+      ],
+      timestamp: new Date().toISOString()
+    }]
+  };
+
+  fetch(DISCORD_WEBHOOK_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(message)
+  }).catch(err => console.error("Discord log failed:", err));
+}
+
+  
 // default routes
 const defaultRoutes = {
   "Line A": { freq:10, stops:[ "Spawn","Chinatown","Central Park","Highrock" ] },
@@ -250,6 +274,22 @@ const countdown = document.getElementById('countdown');
 
 const stationControls = document.getElementById('stationControls');
 const departBtn = document.getElementById('departBtn');
+
+  departBtn.addEventListener("click", () => {
+  const entry = {
+    user: CURRENT_USER,
+    route: selectedRouteName,
+    departTime: new Date().toISOString()
+  };
+  LOGS.unshift(entry);
+  saveLogs(LOGS);
+
+  // ✅ Send to Discord
+  sendShiftLogToDiscord(entry.user, entry.route, entry.departTime);
+
+  alert("Shift logged and sent to Discord!");
+});
+
 const nextBtn = document.getElementById('nextBtn');
 const endBtn = document.getElementById('endBtn');
 const timerDisplay = document.getElementById('timerDisplay');
@@ -518,3 +558,4 @@ function deleteRouteAndReverse(name){
 
 </body>
 </html>
+
