@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Timetable</title>
+    <style>
+        /* Styles for the page */
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .hidden { display: none; }
+        .active { color: green; }
+        .danger { color: red; }
+        .logItem { margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 8px; text-align: left; border: 1px solid #ddd; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+
+    <!-- Login Form -->
+    <div id="loginForm">
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button id="loginBtn">Login</button>
+        <button id="registerBtn">Register</button>
+        <p id="loginError" class="hidden" style="color: red;">Invalid credentials!</p>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="hidden">
+        <h2>Admin Panel</h2>
+        <button id="logoutBtn">Logout</button>
+        <h3>Manage Routes</h3>
+        <select id="routesSelect"></select>
+        <button id="editRouteBtn">Edit Route</button>
+        <button id="deleteRouteBtn">Delete Route</button>
+        <h3>Create New Route</h3>
+        <input type="text" id="newRouteName" placeholder="Route Name">
+        <input type="number" id="newRouteFreq" placeholder="Frequency (min)">
+        <textarea id="newRouteStops" placeholder="Stops (comma separated)"></textarea>
+        <button id="addRouteBtn">Add Route</button>
+        <h3>Manage Users</h3>
+        <div id="userListDiv"></div>
+        <input type="text" id="newUsername" placeholder="Username">
+        <input type="password" id="newUserPass" placeholder="Password">
+        <select id="newUserAdmin">
+            <option value="false">User</option>
+            <option value="true">Admin</option>
+        </select>
+        <button id="createUserBtn">Create User</button>
+    </div>
+
+    <!-- Driver Panel -->
+    <div id="driverPanel" class="hidden">
+        <h2>Driver Panel</h2>
+        <button id="logoutDriverBtn">Logout</button>
+        <h3>Active Drivers</h3>
+        <div id="activeDrivers"></div>
+        <h3>Select Route</h3>
+        <select id="routesSelectDriver"></select>
+        <button id="startRouteBtn">Start Route</button>
+        <div id="timetableCard" class="hidden">
+            <h3>Timetable</h3>
+            <table id="timetableTable">
+                <thead>
+                    <tr>
+                        <th>Stop</th>
+                        <th>Departure Time</th>
+                    </tr>
+                </thead>
+                <tbody id="timetableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Initialize data
+        let USERS = JSON.parse(localStorage.getItem('USERS')) || {};
+        let ROUTES = JSON.parse(localStorage.getItem('ROUTES')) || {};
+        let activeRoutes = JSON.parse(localStorage.getItem('activeRoutes')) || {};
+        let CURRENT_USER = null;
+        let selectedRoute = null;
+        let actualDepartureTime = null;
+        let currentStopIndex = 0;
+        let timerInterval = null;
+
+        // DOM Elements
+        const loginForm = document.getElementById('loginForm');
+        const adminPanel = document.getElementById('adminPanel');
+        const driverPanel = document.getElementById('driverPanel');
+        const routesSelect = document.getElementById('routesSelect');
+        const routesSelectDriver = document.getElementById('routesSelectDriver');
+        const timetableCard = document.getElementById('timetableCard');
+        const timetableBody = document.getElementById('timetableBody');
+        const loginError = document.getElementById('loginError');
+        const newRouteName = document.getElementById('newRouteName');
+        const newRouteFreq = document.getElementById('newRouteFreq');
+        const newRouteStops = document.getElementById('newRouteStops');
+        const addRouteBtn = document.getElementById('addRouteBtn');
+        const editRouteBtn = document.getElementById('editRouteBtn');
+        const deleteRouteBtn = document.getElementById('deleteRouteBtn');
+        const newUsername = document.getElementById('newUsername');
+        const newUserPass = document.getElementById('newUserPass');
+        const newUserAdmin = document.getElementById('newUserAdmin');
+        const createUserBtn = document.getElementById('createUserBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const logoutDriverBtn = document.getElementById('logoutDriverBtn');
+        const activeDrivers = document.getElementById('activeDrivers');
+        const startRouteBtn = document.getElementById('startRouteBtn');
+
+        // Utility Functions
+        function saveUsers() {
+            localStorage.setItem('USERS', JSON.stringify(USERS));
+        }
+
+        function saveRoutes() {
+            localStorage.setItem('ROUTES', JSON.stringify(ROUTES));
+        }
+
+        function saveActiveRoutes() {
+            localStorage.setItem('activeRoutes', JSON.stringify(activeRoutes));
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatDiffSec(seconds) {
+            const min = Math.floor(seconds / 60);
+            const sec = seconds % 60;
+            return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+        }
+
+        function renderRoutesSelect() {
+            routesSelect.innerHTML = '';
+            routesSelectDriver.innerHTML = '';
+            for (const routeName in ROUTES) {
+                const option = document.createElement('option');
+                option.value = routeName;
+                option.textContent = routeName;
+                routesSelect.appendChild(option);
+                routesSelectDriver.appendChild(option.cloneNode(true));
+            }
+        }
+
+        function renderActiveDrivers() {
+            activeDrivers.innerHTML = '';
+            for (const driver in activeRoutes) {
+                const div = document.createElement('div');
+                div.textContent = driver;
+                activeDrivers.appendChild(div);
+            }
+        }
+
+        function renderTimetable() {
+            if (!selectedRoute) return;
+            timetableBody.innerHTML = '';
+            const freq = selectedRoute.freq || 10;
+            let startTime = new Date();
+            startTime.setMinutes(Math.ceil(startTime.getMinutes() / freq) * freq);
+            actualDepartureTime = startTime;
+            currentStopIndex = 0;
+            selectedRoute.stops.forEach((stop, i) => {
+                const tr = document.createElement('tr');
+                const td1 = document.createElement('td');
+                td1.textContent = stop;
+                const td2 = document.createElement('td');
+                td2.textContent = formatTime(new Date(startTime.getTime() + i * freq * 60000));
+                tr.appendChild(td1);
+                tr.appendChild(td2);
+                timetableBody.appendChild(tr);
+            });
+        }
+
+        function updateNextDeparture() {
+            const diff = (actualDepartureTime - new Date()) / 1000;
+            const nextDeparture = document.getElementById('nextDeparture');
+            const countdown = document.getElementById('countdown');
+            nextDeparture.textContent = formatTime(actualDepartureTime);
+            countdown.textContent = formatDiffSec(diff);
+        }
+
+        // Event Listeners
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (USERS[username] && USERS[username].pw === password) {
+                CURRENT_USER = username;
+                loginForm.classList.add('hidden');
+                if (USERS[username].admin) {
+                    adminPanel.classList.remove('hidden');
+                    renderRoutesSelect();
+                    renderUsers();
+                } else {
+                    driverPanel.classList.remove('hidden');
+                    renderRoutesSelect();
+                    renderActiveDrivers();
+                }
+            } else {
+                loginError.classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('registerBtn').addEventListener('click', () => {
+            const username = prompt('Enter username');
+            const password = prompt('Enter password');
+            const isAdmin = confirm('Is this user an admin?');
+            if (!username || !password) return;
+            if (USERS[username]) {
+                alert('Username already exists');
+                return;
+            }
+            USERS[username] = { pw: password, admin: isAdmin };
+            saveUsers();
+            alert('User registered');
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            CURRENT_USER = null;
+            adminPanel.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+        });
+
+        logoutDriverBtn.addEventListener('click', () => {
+            CURRENT_USER = null;
+            driverPanel.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+        });
+
+        addRouteBtn.addEventListener('click', () => {
+            const name = newRouteName.value.trim();
+            const freq = parseInt(newRouteFreq.value) || 10;
+            const stops = newRouteStops.value.split(',').map(s => s.trim()).filter(s => s);
+            if (!name || !stops.length) return;
+            ROUTES[name] = { freq, stops };
+            saveRoutes();
+            renderRoutesSelect();
+            alert('Route added');
+        });
+
+        editRouteBtn.addEventListener('click', () => {
+            const name = routesSelect.value;
+            if (!name) return;
+            const route
+::contentReference[oaicite:0]{index=0}
+ 
+            const newName = prompt('New route name', name) || name;
+            const newFreq = parseInt(prompt('New frequency in minutes', ROUTES[name].freq)) || ROUTES[name].freq;
+            const newStops = prompt('New stops (comma separated)', ROUTES[name].stops.join(',')) || ROUTES[name].stops.join(',');
+            ROUTES[newName] = { freq: newFreq, stops: newStops.split(',').map(s => s.trim()) };
+            if (newName !== name) delete ROUTES[name];
+            saveRoutes();
+            renderRoutesSelect();
+            alert('Route updated');
+        });
+
+        deleteRouteBtn.addEventListener('click', () => {
+            const name = routesSelect.value;
+            if (!name) return;
+            if (confirm(`Delete route "${name}"?`)) {
+                delete ROUTES[name];
+                saveRoutes();
+                renderRoutesSelect();
+                alert('Route deleted');
+            }
+        });
+
+        createUserBtn.addEventListener('click', () => {
+            const username = newUsername.value.trim();
+            const password = newUserPass.value.trim();
+            const isAdmin = newUserAdmin.value === 'true';
+            if (!username || !password) return alert('Fill username and password');
+            if (USERS[username]) return alert('Username already exists');
+            USERS[username] = { pw: password, admin: isAdmin, strikes: 0 };
+            saveUsers();
+            renderUsers();
+            alert('User created');
+        });
+
+        function renderUsers() {
+            const userListDiv = document.getElementById('userListDiv');
+            userListDiv.innerHTML = '';
+            for (const username in USERS) {
+                const div = document.createElement('div');
+                const strikes = USERS[username].strikes || 0;
+                div.innerHTML = `<strong>${username}</strong> - Strikes: ${strikes} <button onclick="giveStrike('${username}')">Give Strike</button>`;
+                userListDiv.appendChild(div);
+            }
+        }
+
+        window.giveStrike = function(username) {
+            if (!USERS[username]) return;
+            USERS[username].strikes = (USERS[username].strikes || 0) + 1;
+            saveUsers();
+            renderUsers();
+            alert(`Gave a strike to ${username}`);
+        }
+
+        startRouteBtn.addEventListener('click', () => {
+            const routeName = routesSelectDriver.value;
+            if (!routeName) return alert('Select a route');
+            if (activeRoutes[routeName]) return alert('Route already in progress by another driver');
+            selectedRoute = ROUTES[routeName];
+            activeRoutes[routeName] = CURRENT_USER;
+            saveActiveRoutes();
+            renderActiveDrivers();
+            renderTimetable();
+            timetableCard.classList.remove('hidden');
+            alert(`Route started! First departure: ${formatTime(actualDepartureTime)}`);
+        });
+
+        // Initialize default users and routes if empty
+        if (!Object.keys(USERS).length) {
+            USERS = {
+                "admin": { pw: "admin123", admin: true, strikes: 0 },
+                "driver1": { pw: "pass123", admin: false, strikes: 0 }
+            };
+            saveUsers();
+        }
+
+        if (!Object.keys(ROUTES).length) {
+            ROUTES = {
+                "Line A": { freq: 10, stops: ["Spawn","Chinatown","Central Park","Highrock"] },
+                "Line B": { freq: 12, stops: ["Spawn","Fire Department","Hospital","Highrock"] }
+            };
+            saveRoutes();
+        }
+
+        renderRoutesSelect();
+        renderActiveDrivers();
+    </script>
+</body>
+</html>
+
+   
