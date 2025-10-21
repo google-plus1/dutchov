@@ -556,14 +556,23 @@ logoutBtn.addEventListener('click', ()=>{
     saveRouteOwnersAndRefresh();
   }
 
-  nextBtn.addEventListener('click', () => {
-  const nextStation = selectedRoute.stops[currentStopIndex];
-  fetch('http://localhost:3000/next-station', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({station: nextStation})
-  });
-});
+ const station = selectedRoute.stops[currentStopIndex];
+
+// Update current station on page
+statusDiv.textContent = `Current Station: ${station.name || station}`;
+
+// Send request to bot to play audio
+fetch('http://localhost:3000/next', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ stationName: station.name || station })
+})
+.then(res => res.json())
+.then(data => {
+  if(data.success) console.log(`🔊 Audio request sent for ${station.name || station}`);
+})
+.catch(err => console.error('❌ Failed to send audio request:', err));
+
 
 
   CURRENT_USER = null; CURRENT_USER_IS_ADMIN = false;
@@ -826,6 +835,7 @@ initUI();
 </script>
 </body>
 </html>
+
 
 
 
