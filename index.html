@@ -556,6 +556,16 @@ logoutBtn.addEventListener('click', ()=>{
     saveRouteOwnersAndRefresh();
   }
 
+  nextBtn.addEventListener('click', () => {
+  const nextStation = selectedRoute.stops[currentStopIndex];
+  fetch('http://localhost:3000/next-station', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({station: nextStation})
+  });
+});
+
+
   CURRENT_USER = null; CURRENT_USER_IS_ADMIN = false;
   document.getElementById('loginSection').style.display = 'block';
   driverControls.style.display = 'none';
@@ -816,5 +826,6 @@ initUI();
 </script>
 </body>
 </html>
+
 
 
