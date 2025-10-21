@@ -187,9 +187,9 @@ const defaultUsers = {
   "Roidkyadmin":   { pw: "Mohamed4obai", admin:true },
   "Roidky":   { pw: "Mohamed4obai", admin:false },
   "pwatg123":   { pw: "utrechtov20092025", admin:false },
-  "ilias4real.":   { pw: "OVIlias239", admin:false },
+  "ilias":   { pw: "IliasOV20", admin:false },
   "milandepro7":   { pw: "Utrechtov20702025", admin:false },
-  "driver":   { pw: "pass123", admin:false }
+  "blobvisje.":   { pw: "pass123", admin:false }
 };
 
 // default routes
@@ -336,19 +336,53 @@ logoutBtn.addEventListener('click', ()=>{
 /* -------------------------
    Active Drivers
 ------------------------- */
-let activeDrivers = [];
-function addActiveDriver(name){
-  if(!activeDrivers.includes(name)) activeDrivers.push(name);
+const STORAGE_ACTIVE_DRIVERS = 'erlc_active_drivers_v1';
+let activeDrivers = JSON.parse(localStorage.getItem(STORAGE_ACTIVE_DRIVERS)) || [];
+
+function saveActiveDrivers() {
+  localStorage.setItem(STORAGE_ACTIVE_DRIVERS, JSON.stringify(activeDrivers));
+}
+
+function addActiveDriver(name) {
+  if (!activeDrivers.includes(name)) {
+    activeDrivers.push(name);
+    saveActiveDrivers();
+  }
   renderActiveDrivers();
 }
-function renderActiveDrivers(){
-  driversList.innerHTML='';
-  activeDrivers.forEach(d=>{
-    const li=document.createElement('li'); li.textContent=d;
+
+function removeActiveDriver(name) {
+  const idx = activeDrivers.indexOf(name);
+  if (idx !== -1) {
+    activeDrivers.splice(idx, 1);
+    saveActiveDrivers();
+  }
+  renderActiveDrivers();
+}
+
+function renderActiveDrivers() {
+  driversList.innerHTML = '';
+  activeDrivers.forEach(d => {
+    const li = document.createElement('li');
+    li.textContent = d;
     driversList.appendChild(li);
   });
-  activeDriversDiv.style.display = activeDrivers.length?'block':'none';
+  activeDriversDiv.style.display = activeDrivers.length ? 'block' : 'none';
 }
+
+// Listen for localStorage changes (so multiple tabs stay in sync)
+window.addEventListener('storage', (e) => {
+  if (e.key === STORAGE_ACTIVE_DRIVERS) {
+    activeDrivers = JSON.parse(localStorage.getItem(STORAGE_ACTIVE_DRIVERS)) || [];
+    renderActiveDrivers();
+  }
+});
+
+// On logout, remove yourself
+logoutBtn.addEventListener('click', () => {
+  if (CURRENT_USER) removeActiveDriver(CURRENT_USER);
+});
+
 
 /* -------------------------
    Routes
@@ -389,18 +423,41 @@ function loadSelectedRoute(){
 /* -------------------------
    Dynamic Timetable Render
 ------------------------- */
-function renderDynamicTimetable(route, departTime){
-  tableBody.innerHTML='';
-  route.stops.forEach((stop,i)=>{
-    const tr=document.createElement('tr');
-    const tdStop=document.createElement('td'); tdStop.textContent=stop.name||stop;
-    const tdTime=document.createElement('td');
-    const arrival = departTime ? new Date(departTime.getTime()+i*60000) : '--:--';
-    tdTime.textContent = departTime? formatTime(arrival): '--:--';
-    tr.appendChild(tdStop); tr.appendChild(tdTime);
+function renderDynamicTimetable(route) {
+  tableBody.innerHTML = "";
+  if (!route) return;
+
+  const nowTime = new Date();
+  const freq = route.freq || 10;
+  const nextDeparture = getNextDeparture(nowTime, freq);
+
+  route.stops.forEach((stop, i) => {
+    const tr = document.createElement("tr");
+    const tdStop = document.createElement("td");
+    tdStop.textContent = stop.name || stop;
+
+    const tdTime = document.createElement("td");
+    const arrival = new Date(nextDeparture.getTime() + i * 60000);
+    tdTime.textContent = formatTime(arrival);
+
+    tr.appendChild(tdStop);
+    tr.appendChild(tdTime);
     tableBody.appendChild(tr);
   });
 }
+
+// Helper function to get next departure time based on frequency
+function getNextDeparture(now, freq) {
+  const minutes = now.getMinutes();
+  const remainder = minutes % freq;
+  const add = remainder === 0 ? 0 : freq - remainder;
+  const next = new Date(now);
+  next.setMinutes(minutes + add);
+  next.setSeconds(0);
+  next.setMilliseconds(0);
+  return next;
+}
+
 
 /* -------------------------
    Next Departure Countdown
@@ -519,4 +576,5 @@ function deleteRouteAndReverse(name){
 
 </body>
 </html>
+
 
