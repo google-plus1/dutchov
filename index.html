@@ -486,6 +486,10 @@ function loadSelectedRoute(){
 
     let name = selectedRouteName;
     selectedRoute = ROUTES[name];
+    if(!selectedRoute) {
+        alert("Route not found!");
+        return;
+    }
 
     if(useReverse){
         const revName = name.endsWith(' 2') ? name.replace(/ 2$/, '') : name + ' 2';
@@ -494,6 +498,26 @@ function loadSelectedRoute(){
             name = revName;
         }
     }
+
+    // calculate next departure based on freq
+    const nowTime = new Date();
+    const freq = selectedRoute.freq;
+    const nextDepMin = Math.ceil(nowTime.getMinutes() / freq) * freq;
+    const nextDepartureTime = new Date(nowTime);
+    nextDepartureTime.setMinutes(nextDepMin);
+    nextDepartureTime.setSeconds(0);
+
+    tableTitle.textContent = name;
+
+    renderDynamicTimetable(selectedRoute, nextDepartureTime); // pass departure
+    nextDeparture.textContent = formatTime(nextDepartureTime);
+    countdown.textContent = formatDiffSec(Math.ceil((nextDepartureTime - nowTime) / 1000));
+
+    timetableCard.style.display = 'block';
+    stationControls.style.display = 'block';
+    clearTimer();
+}
+
 
     if(!selectedRoute) return;
 
@@ -901,24 +925,43 @@ document.addEventListener("DOMContentLoaded", () => {
   confirmBtn.addEventListener('click', ()=>{ selectedRouteName=lineSelect.value; useReverse=false; loadSelectedRoute(); });
   reverseBtn.addEventListener('click', ()=>{ useReverse=!useReverse; loadSelectedRoute(); });
 
-function loadSelectedRoute() {
+function loadSelectedRoute(){
     if(!selectedRouteName) return;
 
-    selectedRoute = ROUTES[selectedRouteName];
-    if (!selectedRoute) {
+    let name = selectedRouteName;
+    selectedRoute = ROUTES[name];
+    if(!selectedRoute) {
         alert("Route not found!");
         return;
     }
 
-    // Show timetable immediately
-    const nowTime = new Date();
-    renderDynamicTimetable(selectedRoute, nowTime);
+    if(useReverse){
+        const revName = name.endsWith(' 2') ? name.replace(/ 2$/, '') : name + ' 2';
+        if(ROUTES[revName]){
+            selectedRoute = ROUTES[revName];
+            name = revName;
+        }
+    }
 
-    // Update UI
-    tableTitle.textContent = selectedRouteName;
+    // calculate next departure based on freq
+    const nowTime = new Date();
+    const freq = selectedRoute.freq;
+    const nextDepMin = Math.ceil(nowTime.getMinutes() / freq) * freq;
+    const nextDepartureTime = new Date(nowTime);
+    nextDepartureTime.setMinutes(nextDepMin);
+    nextDepartureTime.setSeconds(0);
+
+    tableTitle.textContent = name;
+
+    renderDynamicTimetable(selectedRoute, nextDepartureTime); // pass departure
+    nextDeparture.textContent = formatTime(nextDepartureTime);
+    countdown.textContent = formatDiffSec(Math.ceil((nextDepartureTime - nowTime) / 1000));
+
     timetableCard.style.display = 'block';
     stationControls.style.display = 'block';
+    clearTimer();
 }
+
 
   // ------------------------- Timetable -------------------------
 function renderDynamicTimetable(route, departTime){
@@ -992,6 +1035,7 @@ function endRoute(){
 
 </body>
 </html>
+
 
 
 
