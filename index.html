@@ -482,20 +482,40 @@ reverseBtn.addEventListener('click', ()=>{
 });
 
 function loadSelectedRoute(){
-  if(!selectedRouteName) return;
-  let name = selectedRouteName;
-  selectedRoute = ROUTES[name];
-  if(useReverse){
-    const revName = name.endsWith(' 2')? name.replace(/ 2$/,'') : name+' 2';
-    if(ROUTES[revName]){ selectedRoute = ROUTES[revName]; name=revName; }
-  }
-  if(!selectedRoute) return;
-  tableTitle.textContent = name;
-  renderDynamicTimetable(selectedRoute, null);
-  timetableCard.style.display='block';
-  stationControls.style.display='block';
-  clearTimer();
+    if(!selectedRouteName) return;
+
+    let name = selectedRouteName;
+    selectedRoute = ROUTES[name];
+
+    if(useReverse){
+        const revName = name.endsWith(' 2') ? name.replace(/ 2$/, '') : name + ' 2';
+        if(ROUTES[revName]){
+            selectedRoute = ROUTES[revName];
+            name = revName;
+        }
+    }
+
+    if(!selectedRoute) return;
+
+    tableTitle.textContent = name;
+    
+    // ✅ Calculate next departure based on frequency
+    const nowTime = new Date();
+    const freq = selectedRoute.freq;
+    const nextDepMin = Math.ceil(nowTime.getMinutes() / freq) * freq;
+    const nextDepartureTime = new Date(nowTime);
+    nextDepartureTime.setMinutes(nextDepMin);
+    nextDepartureTime.setSeconds(0);
+
+    renderDynamicTimetable(selectedRoute, nextDepartureTime); // PASS the calculated departure
+    nextDeparture.textContent = formatTime(nextDepartureTime);
+    countdown.textContent = formatDiffSec(Math.ceil((nextDepartureTime - nowTime) / 1000));
+
+    timetableCard.style.display = 'block';
+    stationControls.style.display = 'block';
+    clearTimer();
 }
+
 
 /* -------------------------
    Dynamic Timetable Render
@@ -901,22 +921,21 @@ function loadSelectedRoute() {
 }
 
   // ------------------------- Timetable -------------------------
-function renderDynamicTimetable(route, departTime) {
-    tableBody.innerHTML = '';
-    if (!departTime) departTime = getNextDeparture(route.freq);
-    route.stops.forEach((stop, i) => {
+function renderDynamicTimetable(route, departTime){
+    tableBody.innerHTML='';
+    route.stops.forEach((stop,i)=>{
         const tr = document.createElement('tr');
         const tdStop = document.createElement('td');
         tdStop.textContent = stop.name || stop;
+
         const tdTime = document.createElement('td');
-        const arrival = new Date(departTime.getTime() + i * 60000);
-        tdTime.textContent = formatTime(arrival); // HH:MM
+        const arrival = departTime ? new Date(departTime.getTime() + i*60000) : '--:--';
+        tdTime.textContent = departTime ? formatTime(arrival) : '--:--';
+
         tr.appendChild(tdStop);
         tr.appendChild(tdTime);
         tableBody.appendChild(tr);
     });
-    nextDeparture.textContent = formatTime(departTime);
-    countdown.textContent = formatDiffSec(Math.ceil((departTime - new Date()) / 1000));
 }
 
 
@@ -973,6 +992,7 @@ function endRoute(){
 
 </body>
 </html>
+
 
 
 
