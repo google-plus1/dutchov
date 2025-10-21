@@ -451,20 +451,17 @@ function populateRoutesSelect(){
 }
 
 confirmBtn.addEventListener('click', () => {
-    const routeName = lineSelect.value;
+    selectedRouteName = lineSelect.value;
+    useReverse = false;
 
-    if(activeRoutes[routeName]){
-        alert(`${activeRoutes[routeName]} is already on this route.`);
+    if (!selectedRouteName) {
+        alert("Please select a route");
         return;
     }
 
-    selectedRouteName = routeName;
-    useReverse = false;
-    loadSelectedRoute();
-
-    // mark route as taken
-    activeRoutes[routeName] = CURRENT_USER;
+    loadSelectedRoute(); // this actually loads and renders the timetable
 });
+
 
 reverseBtn.addEventListener('click', ()=>{
   if(!selectedRouteName) return;
@@ -872,51 +869,51 @@ document.addEventListener("DOMContentLoaded", () => {
   confirmBtn.addEventListener('click', ()=>{ selectedRouteName=lineSelect.value; useReverse=false; loadSelectedRoute(); });
   reverseBtn.addEventListener('click', ()=>{ useReverse=!useReverse; loadSelectedRoute(); });
 
-  function loadSelectedRoute(){
+function loadSelectedRoute() {
     if(!selectedRouteName) return;
-    let name = selectedRouteName;
-    selectedRoute = ROUTES[name];
-    if(useReverse){ 
-      const revName = name.endsWith(' 2')? name.replace(/ 2$/,'') : name+' 2';
-      if(ROUTES[revName]){ selectedRoute=ROUTES[revName]; name=revName; }
+
+    selectedRoute = ROUTES[selectedRouteName];
+    if (!selectedRoute) {
+        alert("Route not found!");
+        return;
     }
-    if(!selectedRoute) return;
-    tableTitle.textContent=name;
-    renderDynamicTimetable(selectedRoute,null);
-    timetableCard.style.display='block';
-    stationControls.style.display='block';
-    clearTimer();
-  }
+
+    // Show timetable immediately
+    const nowTime = new Date();
+    renderDynamicTimetable(selectedRoute, nowTime);
+
+    // Update UI
+    tableTitle.textContent = selectedRouteName;
+    timetableCard.style.display = 'block';
+    stationControls.style.display = 'block';
+}
 
   // ------------------------- Timetable -------------------------
-function renderDynamicTimetable(route) {
-    tableBody.innerHTML = '';
+function renderDynamicTimetable(route, departTime) {
+    tableBody.innerHTML = ''; // clear existing table
 
-    // Calculate next departure based on route frequency
-    const nowTime = new Date();
-    const freqMinutes = route.freq;
-    const minutes = nowTime.getMinutes();
-    const nextDepMin = Math.ceil(minutes / freqMinutes) * freqMinutes;
-    const nextDepartureTime = new Date(nowTime);
-    nextDepartureTime.setMinutes(nextDepMin);
-    nextDepartureTime.setSeconds(0);
-
-    nextDeparture.textContent = formatTime(nextDepartureTime);
-
-    route.stops.forEach((stop, i) => {
+    route.stops.forEach((stop, index) => {
         const tr = document.createElement('tr');
+
+        // Stop name
         const tdStop = document.createElement('td');
-        tdStop.textContent = stop.name || stop;
-        const tdTime = document.createElement('td');
-
-        const arrival = new Date(nextDepartureTime.getTime() + i * 60000);
-        tdTime.textContent = formatTime(arrival);
-
+        tdStop.textContent = stop;
         tr.appendChild(tdStop);
+
+        // Scheduled time
+        const tdTime = document.createElement('td');
+        if (departTime) {
+            const arrivalTime = new Date(departTime.getTime() + index * 60000); // +1 min per stop
+            tdTime.textContent = arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else {
+            tdTime.textContent = '--:--';
+        }
         tr.appendChild(tdTime);
+
         tableBody.appendChild(tr);
     });
 }
+
 
   // ------------------------- Next Departure Countdown -------------------------
   setInterval(()=>{
@@ -952,16 +949,17 @@ function renderDynamicTimetable(route) {
 
   endBtn.addEventListener('click', endRoute);
 
- function endRoute(){
+function endRoute(){
     clearTimer();
     statusDiv.textContent = 'Route completed!';
     currentStopIndex = 0;
     actualDepartureTime = null;
     renderDynamicTimetable(selectedRoute, null);
 
-    // free the route
+    // Free the route
     if(selectedRouteName) delete activeRoutes[selectedRouteName];
 }
+
 
 
 });
@@ -969,6 +967,7 @@ function renderDynamicTimetable(route) {
 
 </body>
 </html>
+
 
 
 
