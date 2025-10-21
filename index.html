@@ -5,31 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ERLC Bus Scheduler</title>
 <style>
-:root{
-  --bg:#0f1724;
-  --card:#0b1220;
-  --accent:#ff6b6b;
-  --muted:#9aa4c0;
-  --good:#1cc88a;
-  --bad:#e43f5a;
-  --panel:#0f3460;
-}
+:root{ --bg:#0f1724; --card:#0b1220; --accent:#ff6b6b; --muted:#9aa4c0; --good:#1cc88a; --bad:#e43f5a; --panel:#0f3460; }
 *{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
-  background:linear-gradient(180deg,#071024 0%, #0e1530 100%);
-  color:#edf2f7;
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-}
-header{
-  padding:18px 24px;
-  border-bottom:1px solid rgba(255,255,255,.03);
-  display:flex;
-  align-items:center;
-  gap:12px
-}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:linear-gradient(180deg,#071024 0%,#0e1530 100%);color:#edf2f7;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+header{padding:18px 24px;border-bottom:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:12px}
 h1{margin:0;font-size:18px}
 .wrap{display:flex;gap:20px;padding:20px;max-width:1200px;margin:20px auto}
 .card{background:var(--card);border-radius:12px;padding:18px;width:360px;box-shadow:0 6px 30px rgba(2,6,23,.6)}
@@ -61,137 +40,283 @@ th{color:#fff;background:linear-gradient(90deg,var(--accent),#ff907a);border-rad
 </head>
 <body>
 <header>
-  <h1>ERLC Bus Scheduler</h1>
-  <div style="margin-left:auto" class="mutedSmall">Local demo — data saved in browser storage</div>
+<h1>ERLC Bus Scheduler</h1>
+<div style="margin-left:auto" class="mutedSmall">Local demo — data saved in browser storage</div>
 </header>
 <div class="wrap">
-  <div class="card">
-    <div id="loginSection">
-      <h2 style="margin:0 0 8px 0">Login</h2>
-      <label>Username</label>
-      <input id="username" placeholder="username" />
-      <label>Password</label>
-      <input id="password" type="password" placeholder="password" />
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button id="loginBtn">Login</button>
-        <button id="logoutBtn" style="display:none;background:#6c757d">Logout</button>
-      </div>
-      <div id="loginMsg" class="mutedSmall" style="margin-top:8px;color:#ffb4b4"></div>
-    </div>
-    <div id="driverControls" style="display:none;margin-top:12px">
-      <h3 style="margin:0 0 8px 0">Driver Controls</h3>
-      <label>Choose Line</label>
-      <select id="lineSelect"></select>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button id="confirmBtn">Load Timetable</button>
-        <button id="reverseBtn" title="Toggle original/return" class="smallBtn">Reverse</button>
-      </div>
-      <div class="infoRow">
-        <div>
-          <div class="mutedSmall">Current time</div>
-          <div id="currentTime" class="big"></div>
-        </div>
-        <div style="text-align:right">
-          <div class="mutedSmall">Next departure</div>
-          <div id="nextDeparture" class="big">--:--</div>
-        </div>
-      </div>
-      <div style="margin-top:10px">
-        <div class="mutedSmall">Countdown to next departure</div>
-        <div id="countdown" class="timer">--:--</div>
-      </div>
-      <div id="stationControls" style="display:none;margin-top:12px">
-        <div style="display:flex;gap:8px">
-          <button id="departBtn">Depart</button>
-          <button id="nextBtn" disabled>Next Station</button>
-          <button id="endBtn">End</button>
-        </div>
-        <div id="timerDisplay" class="timer" style="margin-top:10px;background:var(--good)">--:--</div>
-        <div id="status" class="status mutedSmall"></div>
-        <div style="margin-top:8px" class="mutedSmall">*Next Station button only in last 15s before arrival or when late.</div>
-      </div>
-    </div>
-  </div>
+<!-- left column: login + driver controls -->
+<div class="card">
+<div id="loginSection">
+<h2 style="margin:0 0 8px 0">Login</h2>
+<label>Username</label>
+<input id="username" placeholder="username" />
+<label>Password</label>
+<input id="password" type="password" placeholder="password" />
+<div style="display:flex;gap:8px;margin-top:8px">
+<button id="loginBtn">Login</button>
+<button id="logoutBtn" style="display:none;background:#6c757d">Logout</button>
+</div>
+<div id="loginMsg" class="mutedSmall" style="margin-top:8px;color:#ffb4b4"></div>
+</div>
 
-  <div class="wide card" style="min-width:520px">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <h2 style="margin:0">Timetable & Admin</h2>
-      <div id="userBadge" class="inlineSmall" style="display:none"></div>
-    </div>
-    <div id="timetableCard" style="margin-top:12px; display:none">
-      <div class="mutedSmall">Timetable for <strong id="tableTitle"></strong></div>
-      <table id="timetableTable">
-        <thead><tr><th>Stop</th><th>Arrival</th></tr></thead>
-        <tbody id="tableBody"></tbody>
-      </table>
-    </div>
+<div id="driverControls" style="display:none;margin-top:12px">
+<h3 style="margin:0 0 8px 0">Driver Controls</h3>
+<label>Choose Line</label>
+<select id="lineSelect"></select>
+<div style="display:flex;gap:8px;margin-top:8px">
+<button id="confirmBtn">Load Timetable</button>
+<button id="reverseBtn" title="Toggle original/return" class="smallBtn">Reverse</button>
+</div>
+<div class="infoRow">
+<div>
+<div class="mutedSmall">Current time</div>
+<div id="currentTime" class="big"></div>
+</div>
+<div style="text-align:right">
+<div class="mutedSmall">Next departure</div>
+<div id="nextDeparture" class="big">--:--</div>
+</div>
+</div>
+<div style="margin-top:10px">
+<div class="mutedSmall">Countdown to next departure</div>
+<div id="countdown" class="timer">--:--</div>
+</div>
 
-    <div id="adminPanel" style="margin-top:16px;display:none" class="adminPanel">
-      <h3 style="margin:0 0 8px 0;color:var(--good)">Admin Panel</h3>
-      <div style="display:flex;gap:10px">
-        <div style="flex:1">
-          <label>New Route name</label>
-          <input id="newRouteName" placeholder="e.g. Line X" />
-          <label>Frequency (minutes)</label>
-          <input id="newRouteFreq" placeholder="10" />
-          <label>Stops (one per line or comma separated)</label>
-          <textarea id="newRouteStops" placeholder="Spawn&#10;Chinatown&#10;Fire Department"></textarea>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button id="addRouteBtn">Add Route</button>
-            <button id="refreshRoutesBtn" class="smallBtn">Refresh</button>
-          </div>
-        </div>
-        <div style="width:260px">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div class="mutedSmall">Routes</div>
-            <div class="mutedSmall">Actions</div>
-          </div>
-          <div id="routesList" style="margin-top:8px;max-height:280px;overflow:auto"></div>
-        </div>
-      </div>
-      <hr style="border:none;border-top:1px solid rgba(255,255,255,.03);margin:12px 0">
-      <div style="display:flex;gap:12px">
-        <div style="flex:1">
-          <div class="mutedSmall">Shift Logs</div>
-          <div id="logsList" style="margin-top:8px;max-height:220px;overflow:auto"></div>
-        </div>
-        <div style="width:220px">
-          <div class="mutedSmall">Admin Actions</div>
-          <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
-            <button id="clearLogsBtn" class="smallBtn">Clear All Logs</button>
-            <button id="exportLogsBtn" class="smallBtn">Export Logs (JSON)</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+<div id="stationControls" style="display:none;margin-top:12px">
+<div style="display:flex;gap:8px">
+<button id="departBtn">Depart</button>
+<button id="nextBtn" disabled>Next Station</button>
+<button id="endBtn">End</button>
+</div>
+<div id="timerDisplay" class="timer" style="margin-top:10px;background:var(--good)">--:--</div>
+<div id="status" class="status mutedSmall"></div>
+<div style="margin-top:8px" class="mutedSmall">*Next Station button only in last 15s before arrival or when late.</div>
+</div>
+</div>
 
-  <div id="activeDrivers" style="display:none">
-    <h3>Active Drivers</h3>
-    <ul id="driversList" style="margin:0;padding-left:18px"></ul>
-  </div>
+<!-- middle: timetable / logs -->
+<div class="wide card" style="min-width:520px">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<h2 style="margin:0">Timetable & Admin</h2>
+<div id="userBadge" class="inlineSmall" style="display:none"></div>
+</div>
+<div id="timetableCard" style="margin-top:12px; display:none">
+<div class="mutedSmall">Timetable for <strong id="tableTitle"></strong></div>
+<table id="timetableTable">
+<thead><tr><th>Stop</th><th>Arrival</th></tr></thead>
+<tbody id="tableBody"></tbody>
+</table>
+</div>
+
+<!-- admin panel (visible to admins only) -->
+<div id="adminPanel" style="margin-top:16px;display:none" class="adminPanel">
+<h3 style="margin:0 0 8px 0;color:var(--good)">Admin Panel</h3>
+<div style="display:flex;gap:10px">
+<div style="flex:1">
+<label>New Route name</label>
+<input id="newRouteName" placeholder="e.g. Line X" />
+<label>Frequency (minutes)</label>
+<input id="newRouteFreq" placeholder="10" />
+<label>Stops (one per line or comma separated)</label>
+<textarea id="newRouteStops" placeholder="Spawn&#10;Chinatown&#10;Fire Department"></textarea>
+<div style="display:flex;gap:8px;margin-top:8px">
+<button id="addRouteBtn">Add Route</button>
+<button id="refreshRoutesBtn" class="smallBtn">Refresh</button>
+</div>
+</div>
+<div style="width:260px">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div class="mutedSmall">Routes</div>
+<div class="mutedSmall">Actions</div>
+</div>
+<div id="routesList" style="margin-top:8px;max-height:280px;overflow:auto"></div>
+</div>
+</div>
+<hr style="border:none;border-top:1px solid rgba(255,255,255,.03);margin:12px 0">
+<div style="display:flex;gap:12px">
+<div style="flex:1">
+<div class="mutedSmall">Shift Logs</div>
+<div id="logsList" style="margin-top:8px;max-height:220px;overflow:auto"></div>
+</div>
+<div style="width:220px">
+<div class="mutedSmall">Admin Actions</div>
+<div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
+<button id="clearLogsBtn" class="smallBtn">Clear All Logs</button>
+<button id="exportLogsBtn" class="smallBtn">Export Logs (JSON)</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- active drivers -->
+<div id="activeDrivers" style="display:none">
+<h3>Active Drivers</h3>
+<ul id="driversList" style="margin:0;padding-left:18px"></ul>
+</div>
 
 <script>
-// default routes
+// -------------------- Storage & Defaults --------------------
+const STORAGE_ROUTES = 'erlc_routes_v2';
+const STORAGE_LOGS = 'erlc_logs_v2';
+const STORAGE_USERS = 'erlc_users_v2';
+
+const defaultUsers = {
+  "pwatg123admin": { pw: "utrechtov20092025", admin:true },
+  "Roidkyadmin":   { pw: "Mohamed4obai", admin:true },
+  "Roidky":        { pw: "Mohamed4obai", admin:false },
+  "pwatg123":      { pw: "utrechtov20092025", admin:false },
+  "Ilias123":      { pw: "Pass123", admin:false },
+  "milandepro7":   { pw: "Utrechtov20702025", admin:false },
+  "blobvisje.":    { pw: "pass123", admin:false }
+};
+
 const defaultRoutes = {
   "Line A": { freq:10, stops:[ "Spawn","Chinatown","Central Park","Highrock" ] },
   "Line C": { freq:10, stops:[ "Spawn","Chinatown","Fire Department","Central Park","Hospital","Farms","Highrock","Springfield" ] },
   "FastLine": { freq:8, stops:[ "Springfield","River City" ] }
 };
 
-// users
-const defaultUsers = {
-  "pwatg123admin": { pw: "utrechtov20092025", admin:true },
-  "Roidkyadmin": { pw: "Mohamed4obai", admin:true },
-  "Roidky": { pw: "Mohamed4obai", admin:false },
-  "pwatg123": { pw: "utrechtov20092025", admin:false },
-  "ilias4real.": { pw: "OVIlias239", admin:false },
-  "milandepro7": { pw: "Utrechtov20702025", admin:false },
-  "driver": { pw: "pass123", admin:false }
-};
+let ROUTES = {};
+let LOGS = [];
+let USERS = {};
+let activeRoutes = {}; // current active route per driver
 
-// Rest of JS code handles login, active drivers, timetable, depart buttons, admin panel, logs
-// As originally posted above.
-</script>
-</body>
-</html>
+// -------------------- Helpers --------------------
+function saveRoutes(routes){ localStorage.setItem(STORAGE_ROUTES, JSON.stringify(routes)); ROUTES=routes; }
+function loadRoutes(){ 
+  let r = localStorage.getItem(STORAGE_ROUTES);
+  if(!r){
+    const temp = JSON.parse(JSON.stringify(defaultRoutes));
+    // add reverse
+    for(const name in defaultRoutes){ temp[name+" 2"]={ freq:defaultRoutes[name].freq, stops:[...defaultRoutes[name].stops].reverse() } }
+    saveRoutes(temp); return temp;
+  }
+  return JSON.parse(r);
+}
+function saveUsers(users){ localStorage.setItem(STORAGE_USERS, JSON.stringify(users)); USERS=users; }
+function loadUsers(){ 
+  let u = localStorage.getItem(STORAGE_USERS);
+  if(!u){ saveUsers(defaultUsers); return defaultUsers; }
+  return JSON.parse(u);
+}
+function saveLogs(l){ localStorage.setItem(STORAGE_LOGS, JSON.stringify(l)); LOGS=l; }
+function loadLogs(){ let l = localStorage.getItem(STORAGE_LOGS); return l?JSON.parse(l):[]; }
+
+function now(){ return new Date(); }
+function formatTime(d){ return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+function formatDiffSec(s){ s=Math.floor(Math.abs(s)); const mm=Math.floor(s/60).toString().padStart(2,'0'); const ss=(s%60).toString().padStart(2,'0'); return `${mm}:${ss}`; }
+
+// -------------------- Load Storage --------------------
+ROUTES = loadRoutes();
+USERS = loadUsers();
+LOGS = loadLogs();
+
+// -------------------- DOM --------------------
+const usernameEl = document.getElementById('username');
+const passwordEl = document.getElementById('password');
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const loginMsg = document.getElementById('loginMsg');
+const driverControls = document.getElementById('driverControls');
+const lineSelect = document.getElementById('lineSelect');
+const confirmBtn = document.getElementById('confirmBtn');
+const reverseBtn = document.getElementById('reverseBtn');
+const currentTime = document.getElementById('currentTime');
+const nextDeparture = document.getElementById('nextDeparture');
+const countdown = document.getElementById('countdown');
+const stationControls = document.getElementById('stationControls');
+const departBtn = document.getElementById('departBtn');
+const nextBtn = document.getElementById('nextBtn');
+const endBtn = document.getElementById('endBtn');
+const timerDisplay = document.getElementById('timerDisplay');
+const statusDiv = document.getElementById('status');
+const timetableCard = document.getElementById('timetableCard');
+const tableTitle = document.getElementById('tableTitle');
+const tableBody = document.getElementById('tableBody');
+const activeDriversDiv = document.getElementById('activeDrivers');
+const driversList = document.getElementById('driversList');
+const userBadge = document.getElementById('userBadge');
+const adminPanel = document.getElementById('adminPanel');
+const routesList = document.getElementById('routesList');
+const logsList = document.getElementById('logsList');
+
+// -------------------- App State --------------------
+let CURRENT_USER = null;
+let CURRENT_USER_IS_ADMIN = false;
+let selectedRouteName = null;
+let selectedRoute = null;
+let useReverse = false;
+let actualDepartureTime = null;
+let currentStopIndex = 0;
+let timerInterval = null;
+let nextDepartureTime = null;
+
+// -------------------- Active Drivers --------------------
+let activeDrivers=[];
+function addActiveDriver(name){ if(!activeDrivers.includes(name)) activeDrivers.push(name); renderActiveDrivers(); }
+function removeActiveDriver(name){ activeDrivers = activeDrivers.filter(x=>x!==name); renderActiveDrivers(); }
+function renderActiveDrivers(){ driversList.innerHTML=''; activeDrivers.forEach(d=>{ const li=document.createElement('li'); li.textContent=d; driversList.appendChild(li); }); activeDriversDiv.style.display = activeDrivers.length?'block':'none'; }
+
+// -------------------- Login --------------------
+loginBtn.addEventListener('click',()=>{
+  const u=usernameEl.value.trim(), p=passwordEl.value;
+  loginMsg.textContent='';
+  if(!u||!p){ loginMsg.textContent='Enter username & password'; return; }
+  const userRecord = USERS[u];
+  if(!userRecord||userRecord.pw!==p){ loginMsg.textContent='Invalid username or password'; return; }
+  CURRENT_USER=u; CURRENT_USER_IS_ADMIN=userRecord.admin;
+  loginMsg.textContent='';
+  document.getElementById('loginSection').style.display='none';
+  driverControls.style.display='block';
+  logoutBtn.style.display='inline-block';
+  userBadge.style.display='inline-block';
+  userBadge.textContent = `${CURRENT_USER}${CURRENT_USER_IS_ADMIN?' (admin)':''}`;
+  addActiveDriver(CURRENT_USER);
+  populateRoutesSelect();
+  if(CURRENT_USER_IS_ADMIN){ adminPanel.style.display='block'; populateAdminRoutes(); populateLogs(); }
+});
+logoutBtn.addEventListener('click',()=>{
+  removeActiveDriver(CURRENT_USER);
+  CURRENT_USER=null; CURRENT_USER_IS_ADMIN=false;
+  document.getElementById('loginSection').style.display='block';
+  driverControls.style.display='none';
+  adminPanel.style.display='none';
+  timetableCard.style.display='none';
+  stationControls.style.display='none';
+  activeDriversDiv.style.display='none';
+  logoutBtn.style.display='none';
+  userBadge.style.display='none';
+});
+
+// -------------------- Routes --------------------
+function populateRoutesSelect(){
+  lineSelect.innerHTML='';
+  Object.keys(ROUTES).sort().forEach(n=>{ const opt=document.createElement('option'); opt.value=n; opt.textContent=n; lineSelect.appendChild(opt); });
+  if(lineSelect.options.length) lineSelect.value=lineSelect.options[0].value;
+}
+
+// -------------------- Timetable --------------------
+function renderDynamicTimetable(route, departureTime){
+  tableBody.innerHTML='';
+  if(!departureTime){
+    nextDeparture.textContent='--:--';
+    countdown.textContent='--:--';
+    route.stops.forEach(stop=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${stop}</td><td>--:--</td>`;
+      tableBody.appendChild(tr);
+    });
+    return;
+  }
+  const freq = route.freq;
+  const nowTime = new Date();
+  const minutes = nowTime.getMinutes();
+  const nextFreqMinute = Math.ceil(minutes/freq)*freq;
+  const nextTime = new Date(nowTime); nextTime.setMinutes(nextFreqMinute); nextTime.setSeconds(0);
+  nextDepartureTime = nextTime;
+  nextDeparture.textContent=formatTime(nextTime);
+  const diffSec = Math.ceil((nextTime-nowTime)/1000);
+  countdown.textContent=formatDiffSec(diffSec);
+
+  route.stops
