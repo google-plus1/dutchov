@@ -614,6 +614,49 @@ addRouteBtn.addEventListener('click', ()=>{
   newRouteName.value=''; newRouteFreq.value=''; newRouteStops.value='';
 });
 
+  <script>
+  const USERS = {
+    "pwatg123admin": { pw: "utrechtov20092025", admin:true },
+    "Roidkyadmin":   { pw: "Mohamed4obai", admin:true },
+    "Roidky":   { pw: "Mohamed4obai", admin:false },
+    "pwatg123":   { pw: "utrechtov20092025", admin:false },
+    "Ilias123":   { pw: "Pass123", admin:false },
+    "milandepro7":   { pw: "Utrechtov20702025", admin:false },
+    "blobvisje.":   { pw: "pass123", admin:false }
+  };
+
+  const usernameInput = document.getElementById("username");
+  const passwordInput = document.getElementById("password");
+  const loginBtn = document.getElementById("loginBtn");
+
+  let CURRENT_USER = null;
+
+  function updateUIAfterLogin() {
+    alert("✅ Logged in as " + CURRENT_USER);
+    // You can hide the login screen or show the main UI here.
+  }
+
+  loginBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+
+    const u = usernameInput.value.trim().toLowerCase();
+    const p = passwordInput.value.trim();
+
+    const matchedEntry = Object.entries(USERS).find(
+      ([key]) => key.trim().toLowerCase() === u
+    );
+
+    if (matchedEntry && matchedEntry[1].pw === p) {
+      CURRENT_USER = matchedEntry[0];
+      localStorage.setItem("CURRENT_USER", CURRENT_USER);
+      updateUIAfterLogin();
+    } else {
+      alert("❌ Invalid username or password");
+    }
+  });
+</script>
+
+
 refreshRoutesBtn.addEventListener('click', populateAdminRoutes);
 clearLogsBtn.addEventListener('click', ()=>{ if(confirm('Clear all logs?')){ LOGS=[]; saveLogs(LOGS); populateLogs(); } });
 exportLogsBtn.addEventListener('click', ()=>{ const data=JSON.stringify(LOGS,null,2); const blob=new Blob([data],{type:'application/json'}); const url=URL.createObjectURL(blob);
@@ -629,6 +672,7 @@ function deleteRouteAndReverse(name){
 
 </body>
 </html>
+
 
 
 
