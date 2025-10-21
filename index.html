@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERLC Bus Scheduler</title>
+<title>OVS</title>
 <style>
 :root{
   --bg:#0f1724; --card:#0b1220; --accent:#ff6b6b; --muted:#9aa4c0; --good:#1cc88a; --bad:#e43f5a; --panel:#0f3460;
@@ -45,7 +45,7 @@ th{color:#fff;background:linear-gradient(90deg,var(--accent),#ff907a);border-rad
 <body>
 
 <header>
-  <h1>ERLC Bus Scheduler</h1>
+  <h1>Openbaar Vervoer systeem</h1>
   <div style="margin-left:auto" class="mutedSmall">Local demo — data saved in browser storage</div>
 </header>
 
@@ -175,6 +175,7 @@ th{color:#fff;background:linear-gradient(90deg,var(--accent),#ff907a);border-rad
 /* -------------------------
    Storage keys / defaults
    ------------------------- */
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1429903434366193734/DRdYl52p-VEVzDjyxgwxrzZR3zZvZUy-oxMAR9C82YF67iMemQdddDIu71gKl0veKdtM";
 const STORAGE_USERS = 'erlc_users_v3';
 const STORAGE_ROUTES = 'erlc_routes_v3';
 const STORAGE_LOGS = 'erlc_logs_v3';
@@ -197,6 +198,13 @@ const defaultRoutes = {
   "Line C": {freq:10, stops:["Spawn","Chinatown","Fire Department","Central Park","Hospital","Farms","Highrock","Springfield"]},
   "FastLine": {freq:8, stops:["Springfield","River City"]}
 };
+
+  fetch('http://localhost:3000/next-station', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ station: 'Farms' })
+});
+
 
 /* -------------------------
    Storage helpers
@@ -808,4 +816,5 @@ initUI();
 </script>
 </body>
 </html>
+
 
