@@ -187,7 +187,7 @@ const defaultUsers = {
   "Roidkyadmin":   { pw: "Mohamed4obai", admin:true },
   "Roidky":   { pw: "Mohamed4obai", admin:false },
   "pwatg123":   { pw: "utrechtov20092025", admin:false },
-  "Ilias123":   { pw: "Pass123", admin:false },
+  "driver":   { pw: "Ilias", admin:false },
   "milandepro7":   { pw: "Utrechtov20702025", admin:false },
   "blobvisje.":   { pw: "pass123", admin:false }
 };
@@ -331,11 +331,26 @@ function formatDiffSec(s){
 /* -------------------------
    Login
 ------------------------- */
-loginBtn.addEventListener('click', ()=>{
-  const u=usernameEl.value.trim(), p=passwordEl.value;
-  loginMsg.textContent='';
-  if(!u||!p){ loginMsg.textContent='Enter username & password'; return;}
-  const userRecord = USERS[u];
+loginBtn.addEventListener("click", () => {
+  const u = usernameInput.value.trim().toLowerCase();
+  const p = passwordInput.value.trim();
+
+  // Case-insensitive match
+  const matchedEntry = Object.entries(USERS).find(
+    ([key, val]) => key.trim().toLowerCase() === u
+  );
+
+  if (matchedEntry && matchedEntry[1].pw === p) {
+    CURRENT_USER = matchedEntry[0];
+    const userRecord = matchedEntry[1];
+    localStorage.setItem("CURRENT_USER", CURRENT_USER);
+    localStorage.setItem("IS_ADMIN", userRecord.admin);
+    updateUIAfterLogin();
+  } else {
+    alert("❌ Invalid username or password");
+  }
+});
+
   if(!userRecord||userRecord.pw!==p){ loginMsg.textContent='Invalid username or password'; return;}
   CURRENT_USER = u;
   CURRENT_USER_IS_ADMIN = userRecord.admin;
@@ -606,6 +621,7 @@ function deleteRouteAndReverse(name){
 
 </body>
 </html>
+
 
 
 
