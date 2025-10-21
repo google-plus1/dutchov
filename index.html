@@ -186,10 +186,11 @@ const defaultUsers = {
   "Roidkyadmin":   { pw: "Mohamed4obai", admin:true },
   "Roidky":        { pw: "Mohamed4obai", admin:false },
   "pwatg123":      { pw: "utrechtov20092025", admin:false },
+  "Ilias123":      { pw: "OVIlias239", admin:false }, // new password
   "milandepro7":   { pw: "Utrechtov20702025", admin:false },
-  "Ilias1234":   { pw: "UtrechtOV20602025", admin:false },
   "blobvisje.":    { pw: "pass123", admin:false }
 };
+
 
 const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1429903434366193734/DRdYl52p-VEVzDjyxgwxrzZR3zZvZUy-oxMAR9C82YF67iMemQdddDIu71gKl0veKdtM";
   
@@ -274,6 +275,7 @@ const loginBtn = document.getElementById("loginBtn");
 
 const driverControls = document.getElementById('driverControls');
 const lineSelect = document.getElementById('lineSelect');
+let activeRoutes = {}; // key: routeName, value: username
 const confirmBtn = document.getElementById('confirmBtn');
 const reverseBtn = document.getElementById('reverseBtn');
 
@@ -448,7 +450,22 @@ function populateRoutesSelect(){
   if(names.length) lineSelect.value=names[0];
 }
 
-confirmBtn.addEventListener('click', ()=>{ selectedRouteName = lineSelect.value; useReverse=false; loadSelectedRoute(); });
+confirmBtn.addEventListener('click', () => {
+    const routeName = lineSelect.value;
+
+    if(activeRoutes[routeName]){
+        alert(`${activeRoutes[routeName]} is already on this route.`);
+        return;
+    }
+
+    selectedRouteName = routeName;
+    useReverse = false;
+    loadSelectedRoute();
+
+    // mark route as taken
+    activeRoutes[routeName] = CURRENT_USER;
+});
+
 reverseBtn.addEventListener('click', ()=>{
   if(!selectedRouteName) return;
   useReverse = !useReverse;
@@ -614,15 +631,16 @@ addRouteBtn.addEventListener('click', ()=>{
 });
 
   <script>
-  const USERS = {
-    "pwatg123admin": { pw: "utrechtov20092025", admin:true },
-    "Roidkyadmin":   { pw: "Mohamed4obai", admin:true },
-    "Roidky":   { pw: "Mohamed4obai", admin:false },
-    "pwatg123":   { pw: "utrechtov20092025", admin:false },
-    "Ilias1234":   { pw: "UtrechtOV20602025", admin:false },
-    "milandepro7":   { pw: "Utrechtov20702025", admin:false },
-    "blobvisje.":   { pw: "pass123", admin:false }
-  };
+const defaultUsers = {
+  "pwatg123admin": { pw: "utrechtov20092025", admin:true },
+  "Roidkyadmin":   { pw: "Mohamed4obai", admin:true },
+  "Roidky":        { pw: "Mohamed4obai", admin:false },
+  "pwatg123":      { pw: "utrechtov20092025", admin:false },
+  "Ilias123":      { pw: "OVIlias239", admin:false }, // new password
+  "milandepro7":   { pw: "Utrechtov20702025", admin:false },
+  "blobvisje.":    { pw: "pass123", admin:false }
+};
+
 
   const usernameInput = document.getElementById("username");
   const passwordInput = document.getElementById("password");
@@ -706,7 +724,7 @@ const defaultUsers = {
   "Roidkyadmin":   { pw: "Mohamed4obai", admin:true },
   "Roidky":        { pw: "Mohamed4obai", admin:false },
   "pwatg123":      { pw: "utrechtov20092025", admin:false },
-  "Ilias1234":   { pw: "UtrechtOV20602025", admin:false },
+  "Ilias123":      { pw: "OVIlias239", admin:false }, // new password
   "milandepro7":   { pw: "Utrechtov20702025", admin:false },
   "blobvisje.":    { pw: "pass123", admin:false }
 };
@@ -871,17 +889,34 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ------------------------- Timetable -------------------------
-  function renderDynamicTimetable(route, departTime){
-    tableBody.innerHTML='';
-    route.stops.forEach((stop,i)=>{
-      const tr=document.createElement('tr');
-      const tdStop=document.createElement('td'); tdStop.textContent=stop; 
-      const tdTime=document.createElement('td'); 
-      tdTime.textContent = departTime ? new Date(departTime.getTime()+i*60000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '--:--';
-      tr.appendChild(tdStop); tr.appendChild(tdTime);
-      tableBody.appendChild(tr);
+function renderDynamicTimetable(route) {
+    tableBody.innerHTML = '';
+
+    // Calculate next departure based on route frequency
+    const nowTime = new Date();
+    const freqMinutes = route.freq;
+    const minutes = nowTime.getMinutes();
+    const nextDepMin = Math.ceil(minutes / freqMinutes) * freqMinutes;
+    const nextDepartureTime = new Date(nowTime);
+    nextDepartureTime.setMinutes(nextDepMin);
+    nextDepartureTime.setSeconds(0);
+
+    nextDeparture.textContent = formatTime(nextDepartureTime);
+
+    route.stops.forEach((stop, i) => {
+        const tr = document.createElement('tr');
+        const tdStop = document.createElement('td');
+        tdStop.textContent = stop.name || stop;
+        const tdTime = document.createElement('td');
+
+        const arrival = new Date(nextDepartureTime.getTime() + i * 60000);
+        tdTime.textContent = formatTime(arrival);
+
+        tr.appendChild(tdStop);
+        tr.appendChild(tdTime);
+        tableBody.appendChild(tr);
     });
-  }
+}
 
   // ------------------------- Next Departure Countdown -------------------------
   setInterval(()=>{
@@ -917,13 +952,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   endBtn.addEventListener('click', endRoute);
 
-  function endRoute(){ clearTimer(); statusDiv.textContent='Route completed!'; currentStopIndex=0; actualDepartureTime=null; renderDynamicTimetable(selectedRoute,null); }
+ function endRoute(){
+    clearTimer();
+    statusDiv.textContent = 'Route completed!';
+    currentStopIndex = 0;
+    actualDepartureTime = null;
+    renderDynamicTimetable(selectedRoute, null);
+
+    // free the route
+    if(selectedRouteName) delete activeRoutes[selectedRouteName];
+}
+
 
 });
 </script>
 
 </body>
 </html>
+
 
 
 
