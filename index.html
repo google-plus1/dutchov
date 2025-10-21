@@ -324,14 +324,13 @@ let timerInterval = null;
 /* -------------------------
    Utility
 ------------------------- */
-function now(){ return new Date(); }
-function formatTime(d){ return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
-function formatDiffSec(s){
-  s = Math.floor(Math.abs(s));
-  const mm = Math.floor(s/60).toString().padStart(2,'0');
-  const ss = (s%60).toString().padStart(2,'0');
-  return `${mm}:${ss}`;
+function formatDiffSec(s) {
+    s = Math.floor(Math.abs(s));
+    const mm = Math.floor(s / 60).toString().padStart(2, '0');
+    const ss = (s % 60).toString().padStart(2, '0');
+    return `${mm}:${ss}`; // ensures MM:SS format
 }
+
 
 /* -------------------------
    Login
@@ -454,13 +453,26 @@ confirmBtn.addEventListener('click', () => {
     selectedRouteName = lineSelect.value;
     useReverse = false;
 
-    if (!selectedRouteName) {
-        alert("Please select a route");
+    // prevent multiple drivers on same route
+    if (activeRoutes[selectedRouteName]) {
+        alert('This route is currently driven by another driver.');
         return;
     }
+    activeRoutes[selectedRouteName] = CURRENT_USER;
 
-    loadSelectedRoute(); // this actually loads and renders the timetable
+    loadSelectedRoute();
 });
+
+function getNextDeparture(freqMinutes) {
+    const now = new Date();
+    const minutes = now.getMinutes();
+    const remainder = minutes % freqMinutes;
+    const next = new Date(now);
+    next.setSeconds(0, 0); // clear seconds and milliseconds
+    if (remainder === 0) return next; 
+    next.setMinutes(minutes + (freqMinutes - remainder));
+    return next;
+}
 
 
 reverseBtn.addEventListener('click', ()=>{
@@ -890,29 +902,23 @@ function loadSelectedRoute() {
 
   // ------------------------- Timetable -------------------------
 function renderDynamicTimetable(route, departTime) {
-    tableBody.innerHTML = ''; // clear existing table
-
-    route.stops.forEach((stop, index) => {
+    tableBody.innerHTML = '';
+    if (!departTime) departTime = getNextDeparture(route.freq);
+    route.stops.forEach((stop, i) => {
         const tr = document.createElement('tr');
-
-        // Stop name
         const tdStop = document.createElement('td');
-        tdStop.textContent = stop;
-        tr.appendChild(tdStop);
-
-        // Scheduled time
+        tdStop.textContent = stop.name || stop;
         const tdTime = document.createElement('td');
-        if (departTime) {
-            const arrivalTime = new Date(departTime.getTime() + index * 60000); // +1 min per stop
-            tdTime.textContent = arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        } else {
-            tdTime.textContent = '--:--';
-        }
+        const arrival = new Date(departTime.getTime() + i * 60000);
+        tdTime.textContent = formatTime(arrival); // HH:MM
+        tr.appendChild(tdStop);
         tr.appendChild(tdTime);
-
         tableBody.appendChild(tr);
     });
+    nextDeparture.textContent = formatTime(departTime);
+    countdown.textContent = formatDiffSec(Math.ceil((departTime - new Date()) / 1000));
 }
+
 
 
   // ------------------------- Next Departure Countdown -------------------------
@@ -967,6 +973,7 @@ function endRoute(){
 
 </body>
 </html>
+
 
 
 
