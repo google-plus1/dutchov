@@ -156,7 +156,7 @@ th{color:#fff;background:linear-gradient(90deg,var(--accent),#ff907a);border-rad
 </div>
 
 <script>
-// -------------------- Storage & Defaults --------------------
+/* ------------------------- Storage ------------------------- */
 const STORAGE_ROUTES = 'erlc_routes_v2';
 const STORAGE_LOGS = 'erlc_logs_v2';
 const STORAGE_USERS = 'erlc_users_v2';
@@ -177,42 +177,55 @@ const defaultRoutes = {
   "FastLine": { freq:8, stops:[ "Springfield","River City" ] }
 };
 
-let ROUTES = {};
-let LOGS = [];
-let USERS = {};
-let activeRoutes = {}; // current active route per driver
+let ROUTES = loadRoutes();
+let LOGS = loadLogs();
+let USERS = loadUsers();
+let activeRoutes = {}; // track which route is active
 
-// -------------------- Helpers --------------------
-function saveRoutes(routes){ localStorage.setItem(STORAGE_ROUTES, JSON.stringify(routes)); ROUTES=routes; }
-function loadRoutes(){ 
+function loadRoutes(){
   let r = localStorage.getItem(STORAGE_ROUTES);
   if(!r){
     const temp = JSON.parse(JSON.stringify(defaultRoutes));
-    // add reverse
-    for(const name in defaultRoutes){ temp[name+" 2"]={ freq:defaultRoutes[name].freq, stops:[...defaultRoutes[name].stops].reverse() } }
-    saveRoutes(temp); return temp;
+    for(const name in defaultRoutes){
+      const revName = name+" 2";
+      temp[revName] = { freq: defaultRoutes[name].freq, stops:[...defaultRoutes[name].stops].reverse() };
+    }
+    localStorage.setItem(STORAGE_ROUTES, JSON.stringify(temp));
+    return temp;
   }
   return JSON.parse(r);
 }
-function saveUsers(users){ localStorage.setItem(STORAGE_USERS, JSON.stringify(users)); USERS=users; }
-function loadUsers(){ 
+
+function saveRoutes(routes){
+  localStorage.setItem(STORAGE_ROUTES, JSON.stringify(routes));
+  ROUTES = routes;
+}
+
+function loadUsers(){
   let u = localStorage.getItem(STORAGE_USERS);
-  if(!u){ saveUsers(defaultUsers); return defaultUsers; }
+  if(!u){
+    localStorage.setItem(STORAGE_USERS, JSON.stringify(defaultUsers));
+    return defaultUsers;
+  }
   return JSON.parse(u);
 }
-function saveLogs(l){ localStorage.setItem(STORAGE_LOGS, JSON.stringify(l)); LOGS=l; }
-function loadLogs(){ let l = localStorage.getItem(STORAGE_LOGS); return l?JSON.parse(l):[]; }
 
-function now(){ return new Date(); }
-function formatTime(d){ return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
-function formatDiffSec(s){ s=Math.floor(Math.abs(s)); const mm=Math.floor(s/60).toString().padStart(2,'0'); const ss=(s%60).toString().padStart(2,'0'); return `${mm}:${ss}`; }
+function saveUsers(users){
+  localStorage.setItem(STORAGE_USERS, JSON.stringify(users));
+  USERS = users;
+}
 
-// -------------------- Load Storage --------------------
-ROUTES = loadRoutes();
-USERS = loadUsers();
-LOGS = loadLogs();
+function loadLogs(){
+  let l = localStorage.getItem(STORAGE_LOGS);
+  return l? JSON.parse(l) : [];
+}
 
-// -------------------- DOM --------------------
+function saveLogs(l){
+  localStorage.setItem(STORAGE_LOGS, JSON.stringify(l));
+  LOGS = l;
+}
+
+/* ------------------------- DOM Elements ------------------------- */
 const usernameEl = document.getElementById('username');
 const passwordEl = document.getElementById('password');
 const loginBtn = document.getElementById('loginBtn');
@@ -240,8 +253,15 @@ const userBadge = document.getElementById('userBadge');
 const adminPanel = document.getElementById('adminPanel');
 const routesList = document.getElementById('routesList');
 const logsList = document.getElementById('logsList');
+const addRouteBtn = document.getElementById('addRouteBtn');
+const newRouteName = document.getElementById('newRouteName');
+const newRouteFreq = document.getElementById('newRouteFreq');
+const newRouteStops = document.getElementById('newRouteStops');
+const refreshRoutesBtn = document.getElementById('refreshRoutesBtn');
+const clearLogsBtn = document.getElementById('clearLogsBtn');
+const exportLogsBtn = document.getElementById('exportLogsBtn');
 
-// -------------------- App State --------------------
+/* ------------------------- State ------------------------- */
 let CURRENT_USER = null;
 let CURRENT_USER_IS_ADMIN = false;
 let selectedRouteName = null;
@@ -250,22 +270,52 @@ let useReverse = false;
 let actualDepartureTime = null;
 let currentStopIndex = 0;
 let timerInterval = null;
-let nextDepartureTime = null;
 
-// -------------------- Active Drivers --------------------
-let activeDrivers=[];
-function addActiveDriver(name){ if(!activeDrivers.includes(name)) activeDrivers.push(name); renderActiveDrivers(); }
-function removeActiveDriver(name){ activeDrivers = activeDrivers.filter(x=>x!==name); renderActiveDrivers(); }
-function renderActiveDrivers(){ driversList.innerHTML=''; activeDrivers.forEach(d=>{ const li=document.createElement('li'); li.textContent=d; driversList.appendChild(li); }); activeDriversDiv.style.display = activeDrivers.length?'block':'none'; }
+/* ------------------------- Utils ------------------------- */
+function now(){ return new Date(); }
+function formatTime(d){ return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
+function formatDiffSec(s){
+  s = Math.floor(Math.abs(s));
+  const mm = Math.floor(s/60).toString().padStart(2,'0');
+  const ss = (s%60).toString().padStart(2,'0');
+  return `${mm}:${ss}`;
+}
 
-// -------------------- Login --------------------
-loginBtn.addEventListener('click',()=>{
-  const u=usernameEl.value.trim(), p=passwordEl.value;
+/* ------------------------- Active Drivers ------------------------- */
+let activeDrivers = [];
+function addActiveDriver(name){
+  if(!activeDrivers.includes(name)) activeDrivers.push(name);
+  renderActiveDrivers();
+}
+function removeActiveDriver(name){
+  const idx = activeDrivers.indexOf(name);
+  if(idx>-1) activeDrivers.splice(idx,1);
+  renderActiveDrivers();
+}
+function renderActiveDrivers(){
+  driversList.innerHTML='';
+  activeDrivers.forEach(d=>{
+    const li = document.createElement('li');
+    li.textContent=d;
+    driversList.appendChild(li);
+  });
+  activeDriversDiv.style.display = activeDrivers.length?'block':'none';
+}
+
+/* ------------------------- Login ------------------------- */
+loginBtn.addEventListener('click', ()=>{
+  const u=usernameEl.value.trim();
+  const p=passwordEl.value;
   loginMsg.textContent='';
   if(!u||!p){ loginMsg.textContent='Enter username & password'; return; }
   const userRecord = USERS[u];
   if(!userRecord||userRecord.pw!==p){ loginMsg.textContent='Invalid username or password'; return; }
-  CURRENT_USER=u; CURRENT_USER_IS_ADMIN=userRecord.admin;
+  
+  // check if route already active
+  if(Object.values(activeRoutes).includes(u)){ loginMsg.textContent='Another driver is using a route'; return; }
+
+  CURRENT_USER = u;
+  CURRENT_USER_IS_ADMIN = userRecord.admin;
   loginMsg.textContent='';
   document.getElementById('loginSection').style.display='none';
   driverControls.style.display='block';
@@ -274,11 +324,22 @@ loginBtn.addEventListener('click',()=>{
   userBadge.textContent = `${CURRENT_USER}${CURRENT_USER_IS_ADMIN?' (admin)':''}`;
   addActiveDriver(CURRENT_USER);
   populateRoutesSelect();
-  if(CURRENT_USER_IS_ADMIN){ adminPanel.style.display='block'; populateAdminRoutes(); populateLogs(); }
+  if(CURRENT_USER_IS_ADMIN){
+    adminPanel.style.display='block';
+    populateAdminRoutes();
+    populateLogs();
+  }
 });
-logoutBtn.addEventListener('click',()=>{
+
+logoutBtn.addEventListener('click', ()=>{
   removeActiveDriver(CURRENT_USER);
-  CURRENT_USER=null; CURRENT_USER_IS_ADMIN=false;
+  CURRENT_USER=null;
+  CURRENT_USER_IS_ADMIN=false;
+  selectedRouteName=null;
+  selectedRoute=null;
+  actualDepartureTime=null;
+  currentStopIndex=0;
+  clearTimer();
   document.getElementById('loginSection').style.display='block';
   driverControls.style.display='none';
   adminPanel.style.display='none';
@@ -289,34 +350,243 @@ logoutBtn.addEventListener('click',()=>{
   userBadge.style.display='none';
 });
 
-// -------------------- Routes --------------------
+/* ------------------------- Routes ------------------------- */
 function populateRoutesSelect(){
   lineSelect.innerHTML='';
-  Object.keys(ROUTES).sort().forEach(n=>{ const opt=document.createElement('option'); opt.value=n; opt.textContent=n; lineSelect.appendChild(opt); });
+  Object.keys(ROUTES).sort().forEach(n=>{
+    const opt = document.createElement('option');
+    opt.value = n;
+    opt.textContent = n;
+    lineSelect.appendChild(opt);
+  });
   if(lineSelect.options.length) lineSelect.value=lineSelect.options[0].value;
 }
 
-// -------------------- Timetable --------------------
-function renderDynamicTimetable(route, departureTime){
-  tableBody.innerHTML='';
-  if(!departureTime){
-    nextDeparture.textContent='--:--';
-    countdown.textContent='--:--';
-    route.stops.forEach(stop=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${stop}</td><td>--:--</td>`;
-      tableBody.appendChild(tr);
-    });
+confirmBtn.addEventListener('click', ()=>{
+  const routeName = lineSelect.value;
+  if(!routeName) return;
+  // free previous route if any
+  if(selectedRouteName) delete activeRoutes[selectedRouteName];
+  selectedRouteName = routeName;
+  selectedRoute = ROUTES[routeName];
+  useReverse=false;
+
+  // check if route is free
+  if(activeRoutes[selectedRouteName]){
+    alert('This route is currently in use by another driver.');
     return;
   }
-  const freq = route.freq;
+  activeRoutes[selectedRouteName] = CURRENT_USER;
+
+  // render timetable
+  renderDynamicTimetable(selectedRoute);
+  timetableCard.style.display='block';
+  stationControls.style.display='block';
+});
+
+reverseBtn.addEventListener('click', ()=>{
+  if(!selectedRouteName) return;
+  useReverse = !useReverse;
+  const revName = selectedRouteName.endsWith(' 2')? selectedRouteName.replace(/ 2$/,'') : selectedRouteName+' 2';
+  if(ROUTES[revName]) selectedRoute = ROUTES[revName];
+  renderDynamicTimetable(selectedRoute);
+});
+
+/* ------------------------- Render Timetable ------------------------- */
+function renderDynamicTimetable(route){
+  tableBody.innerHTML='';
   const nowTime = new Date();
+  const freq = route.freq;
   const minutes = nowTime.getMinutes();
   const nextFreqMinute = Math.ceil(minutes/freq)*freq;
-  const nextTime = new Date(nowTime); nextTime.setMinutes(nextFreqMinute); nextTime.setSeconds(0);
-  nextDepartureTime = nextTime;
-  nextDeparture.textContent=formatTime(nextTime);
-  const diffSec = Math.ceil((nextTime-nowTime)/1000);
-  countdown.textContent=formatDiffSec(diffSec);
+  const nextTime = new Date(nowTime);
+  nextTime.setMinutes(nextFreqMinute);
+  nextTime.setSeconds(0);
+  actualDepartureTime = nextTime;
 
-  route.stops
+  nextDeparture.textContent=formatTime(nextTime);
+  countdown.textContent=formatDiffSec(Math.ceil((nextTime-nowTime)/1000));
+
+  route.stops.forEach((stop,i)=>{
+    const tr = document.createElement('tr');
+    const arrival = new Date(nextTime.getTime()+i*60000);
+    tr.innerHTML = `<td>${stop}</td><td>${formatTime(arrival)}</td>`;
+    tableBody.appendChild(tr);
+  });
+}
+
+/* ------------------------- Timer ------------------------- */
+setInterval(()=>{
+  const n = new Date();
+  currentTime.textContent = n.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  if(actualDepartureTime){
+    const diffSec = Math.ceil((actualDepartureTime - new Date())/1000);
+    countdown.textContent = formatDiffSec(diffSec>0?diffSec:0);
+  }
+},1000);
+
+function startStopTimerForIndex(idx){
+  clearTimer();
+  timerInterval = setInterval(updateTimerDisplay,1000);
+  updateTimerDisplay();
+}
+
+function updateTimerDisplay(){
+  if(!selectedRoute || currentStopIndex>=selectedRoute.stops.length || !actualDepartureTime){
+    timerDisplay.textContent='--:--';
+    nextBtn.disabled=true;
+    return;
+  }
+  const expected = new Date(actualDepartureTime.getTime()+currentStopIndex*60000);
+  let diffSec = Math.ceil((expected - new Date())/1000);
+  if(diffSec>=0){
+    timerDisplay.style.background='var(--good)';
+    timerDisplay.textContent=formatDiffSec(diffSec);
+    nextBtn.disabled = diffSec>15;
+  }else{
+    timerDisplay.style.background='var(--bad)';
+    timerDisplay.textContent='-'+formatDiffSec(Math.abs(diffSec));
+    nextBtn.disabled=false;
+  }
+}
+
+function clearTimer(){
+  if(timerInterval) clearInterval(timerInterval);
+  timerInterval=null;
+  timerDisplay.textContent='--:--';
+  nextBtn.disabled=true;
+}
+
+/* ------------------------- Depart / Next / End ------------------------- */
+departBtn.addEventListener('click', ()=>{
+  if(!selectedRoute) return alert('Load a route first');
+  currentStopIndex=0;
+  logShift(CURRENT_USER, tableTitle.textContent || lineSelect.value);
+  startStopTimerForIndex(currentStopIndex);
+  statusDiv.textContent = `Departed: ${selectedRoute.stops[currentStopIndex]}`;
+});
+
+nextBtn.addEventListener('click', ()=>{
+  if(!selectedRoute || !actualDepartureTime) return;
+  const arrival = new Date(actualDepartureTime.getTime()+currentStopIndex*60000);
+  const secRemaining = Math.ceil((arrival - new Date())/1000);
+  if(secRemaining>15){ 
+    statusDiv.textContent=`Next Station only in last 15s before arrival (${secRemaining}s left)`;
+    return;
+  }
+  const diff = Math.floor((new Date()-arrival)/1000);
+  if(diff<=0){
+    statusDiv.innerHTML=`<span class="ok">On Time ✅</span> &nbsp;(${formatDiffSec(Math.abs(diff))})`;
+  }else{
+    statusDiv.innerHTML=`<span class="danger">Late ❌</span> &nbsp;(-${formatDiffSec(diff)})`;
+  }
+  currentStopIndex++;
+  if(currentStopIndex>=selectedRoute.stops.length){ endRoute(); return; }
+  startStopTimerForIndex(currentStopIndex);
+});
+
+endBtn.addEventListener('click', endRoute);
+function endRoute(){
+  clearTimer();
+  statusDiv.textContent='Route completed!';
+  currentStopIndex=0;
+  actualDepartureTime=null;
+  renderDynamicTimetable(selectedRoute);
+  if(selectedRouteName) delete activeRoutes[selectedRouteName];
+}
+
+/* ------------------------- Shift Logs ------------------------- */
+function logShift(user, routeName){
+  const entry={user,route:routeName,time:new Date().toISOString()};
+  LOGS.unshift(entry);
+  saveLogs(LOGS);
+  if(CURRENT_USER_IS_ADMIN) populateLogs();
+}
+
+function populateLogs(){
+  logsList.innerHTML='';
+  if(!LOGS.length){ logsList.textContent='No shift logs'; return; }
+  LOGS.forEach((l,idx)=>{
+    const wrap=document.createElement('div');
+    wrap.className='logItem';
+    const left=document.createElement('div');
+    left.innerHTML=`<strong>${l.user}</strong> - ${l.route} <div class="mutedSmall">${new Date(l.time).toLocaleString()}</div>`;
+    const right=document.createElement('div');
+    const del=document.createElement('button');
+    del.className='smallBtn';
+    del.textContent='Delete';
+    del.addEventListener('click', ()=>{
+      if(!confirm('Delete this log?')) return;
+      LOGS.splice(idx,1);
+      saveLogs(LOGS);
+      populateLogs();
+    });
+    right.appendChild(del);
+    wrap.appendChild(left);
+    wrap.appendChild(right);
+    logsList.appendChild(wrap);
+  });
+}
+
+/* ------------------------- Admin Routes ------------------------- */
+function populateAdminRoutes(){
+  routesList.innerHTML='';
+  Object.keys(ROUTES).sort().forEach(n=>{
+    const div=document.createElement('div');
+    div.style.display='flex';
+    div.style.justifyContent='space-between';
+    div.style.alignItems='center';
+    div.style.marginBottom='8px';
+    const left=document.createElement('div');
+    left.innerHTML=`<strong>${n}</strong> <div class="mutedSmall">${ROUTES[n].freq} min — ${ROUTES[n].stops.length} stops</div>`;
+    const right=document.createElement('div');
+    const delBtn=document.createElement('button');
+    delBtn.className='smallBtn';
+    delBtn.textContent='Delete';
+    delBtn.addEventListener('click', ()=>{
+      if(!confirm(`Delete route "${n}" and reverse?`)) return;
+      deleteRouteAndReverse(n);
+      populateAdminRoutes();
+      populateRoutesSelect();
+    });
+    right.appendChild(delBtn);
+    div.appendChild(left);
+    div.appendChild(right);
+    routesList.appendChild(div);
+  });
+}
+
+addRouteBtn.addEventListener('click', ()=>{
+  const name = newRouteName.value.trim();
+  const freq = parseInt(newRouteFreq.value.trim());
+  const stops = newRouteStops.value.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
+  if(!name||!freq||stops.length<2) return alert('Fill name, freq and at least 2 stops');
+  ROUTES[name]={freq,stops};
+  ROUTES[name+' 2']={freq,[...stops].reverse()};
+  saveRoutes(ROUTES);
+  populateAdminRoutes();
+  populateRoutesSelect();
+  newRouteName.value=''; newRouteFreq.value=''; newRouteStops.value='';
+});
+
+refreshRoutesBtn.addEventListener('click', populateAdminRoutes);
+clearLogsBtn.addEventListener('click', ()=>{
+  if(confirm('Clear all logs?')){ LOGS=[]; saveLogs(LOGS); populateLogs(); }
+});
+
+exportLogsBtn.addEventListener('click', ()=>{
+  const data = JSON.stringify(LOGS,null,2);
+  const blob = new Blob([data],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='shift_logs.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+function deleteRouteAndReverse(name){
+  delete ROUTES[name];
+  const revName = name.endsWith(' 2')? name.replace(/ 2$/,'') : name+' 2';
+  if(ROUTES[revName]) delete ROUTES[revName];
+  saveRoutes(ROUTES);
+}
+</script>
