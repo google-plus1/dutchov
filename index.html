@@ -219,10 +219,24 @@ function sendShiftLogToDiscord(username, routeName, departTime) {
 
 // default routes
 const defaultRoutes = {
-  "Line A": { freq:10, stops:[ "Spawn","Chinatown","Central Park","Highrock" ] },
-  "Line C": { freq:10, stops:[ "Spawn","Chinatown","Fire Department","Central Park","Hospital","Farms","Highrock","Springfield" ] },
-  "FastLine": { freq:8, stops:[ "Springfield","River City" ] }
+  "Lijn 6": { 
+    freq: 10, 
+    stops: ["Spawn", "Fire Department", "Central Park", "P+R Transferium", "Farms", "Highrock"] 
+  },
+  "Lijn 7": { 
+    freq: 10, 
+    stops: ["Spawn", "Chinatown", "Fire Department", "Central Park", "Hospital", "Farms", "Highrock", "Springfield"] 
+  },
+  "FastLine": { 
+    freq: 8, 
+    stops: ["Springfield", "River City"] 
+  },
+  "Lijn Shuttlebus": { 
+    freq: 10, 
+    stops: ["Spawn", "Repair Shop", "P+R Transferium"] 
+  }
 };
+
 
 // Storage helpers
 function saveRoutes(routes){ localStorage.setItem(STORAGE_ROUTES, JSON.stringify(routes)); ROUTES = routes; }
@@ -581,5 +595,6 @@ function deleteRouteAndReverse(name){
 
 </body>
 </html>
+
 
 
