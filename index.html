@@ -219,23 +219,12 @@ function sendShiftLogToDiscord(username, routeName, departTime) {
 
 // default routes
 const defaultRoutes = {
-  "Lijn 6": { 
-    freq: 10, 
-    stops: ["Spawn", "Fire Department", "Central Park", "P+R Transferium", "Farms", "Highrock"] 
-  },
-  "Lijn 7": { 
-    freq: 10, 
-    stops: ["Spawn", "Chinatown", "Fire Department", "Central Park", "Hospital", "Farms", "Highrock", "Springfield"] 
-  },
-  "FastLine": { 
-    freq: 8, 
-    stops: ["Springfield", "River City"] 
-  },
-  "Lijn Shuttlebus": { 
-    freq: 10, 
-    stops: ["Spawn", "Repair Shop", "P+R Transferium"] 
-  }
+  "Lijn 6": { freq: 10, stops: ["Spawn", "Fire Department", "Central Park", "P+R Transferium", "Farms", "High Rock park"] },
+  "Line B": { freq: 10, stops: ["Spawn", "Chinatown", "Fire Department", "Central Park", "Hospital", "Farms", "Highrock", "Springfield"] },
+  "FastLine": { freq: 8, stops: ["Springfield", "River City"] },
+  "Line C": { freq: 10, stops: ["Spawn", "Repair Shop", "P+R Transferium"] }
 };
+
 
 
 // Storage helpers
@@ -407,6 +396,27 @@ function updateCurrentStationDisplay() {
         return;
     }
     document.getElementById('currentStation').textContent = "Current Station: " + selectedRoute.stops[currentStopIndex];
+}
+
+  function sendShiftLogToDiscord(username, routeName, departTime) {
+  const message = {
+    embeds: [{
+      title: "🚌 New Shift Started",
+      color: 0x00ff00,
+      fields: [
+        { name: "Driver", value: username, inline: true },
+        { name: "Route", value: routeName, inline: true },
+        { name: "Departed At", value: new Date(departTime).toLocaleString(), inline: false }
+      ],
+      timestamp: new Date().toISOString()
+    }]
+  };
+
+  fetch(DISCORD_WEBHOOK_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(message)
+  }).catch(err => console.error("Discord log failed:", err));
 }
 
   
@@ -595,6 +605,7 @@ function deleteRouteAndReverse(name){
 
 </body>
 </html>
+
 
 
 
