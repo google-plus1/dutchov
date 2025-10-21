@@ -268,6 +268,10 @@ const passwordEl = document.getElementById('password');
 const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const loginMsg = document.getElementById('loginMsg');
+const usernameInput = document.getElementById("username");
+const passwordInput = document.getElementById("password");
+const loginBtn = document.getElementById("loginBtn");
+
 
 const driverControls = document.getElementById('driverControls');
 const lineSelect = document.getElementById('lineSelect');
@@ -331,13 +335,16 @@ function formatDiffSec(s){
 /* -------------------------
    Login
 ------------------------- */
-loginBtn.addEventListener("click", () => {
+// ===== LOGIN BUTTON HANDLER =====
+loginBtn.addEventListener("click", (e) => {
+  e.preventDefault(); // stop form reload if inside <form>
+
   const u = usernameInput.value.trim().toLowerCase();
   const p = passwordInput.value.trim();
 
-  // Case-insensitive match
+  // Find matching user (case-insensitive)
   const matchedEntry = Object.entries(USERS).find(
-    ([key, val]) => key.trim().toLowerCase() === u
+    ([key]) => key.trim().toLowerCase() === u
   );
 
   if (matchedEntry && matchedEntry[1].pw === p) {
@@ -350,6 +357,7 @@ loginBtn.addEventListener("click", () => {
     alert("❌ Invalid username or password");
   }
 });
+
 
   if(!userRecord||userRecord.pw!==p){ loginMsg.textContent='Invalid username or password'; return;}
   CURRENT_USER = u;
@@ -621,6 +629,7 @@ function deleteRouteAndReverse(name){
 
 </body>
 </html>
+
 
 
 
