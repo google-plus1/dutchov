@@ -832,12 +832,118 @@ function initUI(){
   });
 }
 
+  <script>
+// === LOGIN SYSTEM FIXED ===
+
+// Example user list (you can edit these)
+const defaultUsers = {
+  "pwatg123admin": {pw:"utrechtov20092025", admin:true},
+  "Roidkyadmin": {pw:"Mohamed4obai", admin:true},
+  "Roidky": {pw:"Mohamed4obai", admin:false},
+  "pwatg123": {pw:"utrechtov20092025", admin:false},
+  "Ilias123": {pw:"Pass123", admin:false},
+  "milandepro7": {pw:"Utrechtov20702025", admin:false},
+  "blobvisje.": {pw:"pass123", admin:false}
+};
+
+
+let CURRENT_USER = null;
+let CURRENT_USER_IS_ADMIN = false;
+let ACTIVE_DRIVERS = JSON.parse(localStorage.getItem("ACTIVE_DRIVERS") || "[]");
+
+function saveActiveAndRefresh() {
+  localStorage.setItem("ACTIVE_DRIVERS", JSON.stringify(ACTIVE_DRIVERS));
+  renderActiveDrivers();
+}
+
+function renderActiveDrivers() {
+  const list = document.getElementById("driversList");
+  if (!list) return;
+  list.innerHTML = "";
+  ACTIVE_DRIVERS.forEach(name => {
+    const li = document.createElement("li");
+    li.textContent = name;
+    list.appendChild(li);
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  const loginBtn = document.getElementById("loginBtn");
+  const usernameEl = document.getElementById("username");
+  const passwordEl = document.getElementById("password");
+  const loginMsg = document.getElementById("loginMsg");
+
+  const driverControls = document.getElementById("driverControls");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const userBadge = document.getElementById("userBadge");
+
+  renderActiveDrivers();
+
+  if (loginBtn) {
+    loginBtn.addEventListener("click", function() {
+      const u = usernameEl.value.trim();
+      const p = passwordEl.value;
+      loginMsg.textContent = "";
+
+      if (!u || !p) {
+        loginMsg.textContent = "Enter username & password";
+        return;
+      }
+
+      const rec = USERS[u];
+      if (!rec || rec.pw !== p) {
+        loginMsg.textContent = "Invalid username or password";
+        return;
+      }
+
+      // Login successful
+      CURRENT_USER = u;
+      CURRENT_USER_IS_ADMIN = !!rec.admin;
+
+      document.getElementById("loginSection").style.display = "none";
+      if (driverControls) driverControls.style.display = "block";
+      if (logoutBtn) logoutBtn.style.display = "inline-block";
+      if (userBadge) {
+        userBadge.style.display = "inline-block";
+        userBadge.textContent = `${CURRENT_USER}${CURRENT_USER_IS_ADMIN ? " (admin)" : ""}`;
+      }
+
+      // Add to active drivers if not there
+      if (!ACTIVE_DRIVERS.includes(CURRENT_USER)) {
+        ACTIVE_DRIVERS.push(CURRENT_USER);
+        saveActiveAndRefresh();
+      }
+    });
+  }
+
+  // Logout
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", function() {
+      if (CURRENT_USER) {
+        ACTIVE_DRIVERS = ACTIVE_DRIVERS.filter(name => name !== CURRENT_USER);
+        saveActiveAndRefresh();
+      }
+      CURRENT_USER = null;
+      CURRENT_USER_IS_ADMIN = false;
+      document.getElementById("loginSection").style.display = "block";
+      if (driverControls) driverControls.style.display = "none";
+      if (logoutBtn) logoutBtn.style.display = "none";
+      if (userBadge) userBadge.style.display = "none";
+      usernameEl.value = "";
+      passwordEl.value = "";
+    });
+  }
+});
+</script>
+
+
 // initial call
 initUI();
 
 </script>
 </body>
 </html>
+
 
 
 
