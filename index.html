@@ -364,14 +364,39 @@ right.appendChild(del); wrap.appendChild(left); wrap.appendChild(right); logsLis
 }
   /* ------------------------- Next departure calculation ------------------------- */
 function getNextDeparture(nowDate, freq) {
-    // freq in minutes
-    const next = new Date(nowDate);
-    const mins = next.getMinutes();
-    const rem = mins % freq;
-    const add = rem === 0 ? 0 : freq - rem;
-    next.setMinutes(mins + add);
-    next.setSeconds(0, 0);
-    return next;
+  // freq = minutes between departures
+  const next = new Date(nowDate);
+  const mins = next.getMinutes();
+  const rem = mins % freq;
+  const add = rem === 0 ? 0 : freq - rem;
+  next.setMinutes(mins + add);
+  next.setSeconds(0, 0);
+  return next;
+}
+
+  function renderDynamicTimetable(route, startTime) {
+  const tableBody = document.querySelector('#timetableBody');
+  tableBody.innerHTML = '';
+  
+  const freq = route.freq;
+  const stops = route.stops;
+  let currentTime = new Date(startTime);
+  
+  stops.forEach((stop, index) => {
+    const row = document.createElement('tr');
+    const arrival = new Date(currentTime);
+    row.innerHTML = `
+      <td>${stop}</td>
+      <td>${formatTime(arrival)}</td>
+    `;
+    tableBody.appendChild(row);
+    currentTime.setMinutes(currentTime.getMinutes() + 1); // 1 min per stop
+  });
+}
+
+
+function formatTime(d) {
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 
@@ -382,37 +407,36 @@ activeDriversDiv.style.display=ACTIVE_DRIVERS.length?'block':'none';
 
 // Load Timetable
 confirmBtn.addEventListener('click', () => {
-    if (!CURRENT_USER) {
-        loginMsg.textContent = 'Please login first';
-        return;
-    }
+  if (!CURRENT_USER) {
+    alert("Please login first.");
+    return;
+  }
 
-    selectedRouteName = lineSelect.value;
-    selectedRoute = ROUTES[selectedRouteName];
+  selectedRouteName = lineSelect.value;
+  selectedRoute = ROUTES[selectedRouteName];
 
-    if (!selectedRoute) {
-        alert('Route not found');
-        return;
-    }
+  if (!selectedRoute) {
+    alert("Route not found!");
+    return;
+  }
 
-    // Compute next scheduled departure based on frequency
-    const nextDeparture = getNextDeparture(new Date(), selectedRoute.freq);
-    nextDepartureEl.textContent = formatTime(nextDeparture);
+  // Calculate next departure time using frequency
+  const nextDeparture = getNextDeparture(new Date(), selectedRoute.freq);
+  nextDepartureEl.textContent = formatTime(nextDeparture);
 
-    // Render timetable
-    renderDynamicTimetable(selectedRoute, nextDeparture);
+  // Render the timetable
+  renderDynamicTimetable(selectedRoute, nextDeparture);
 
-    // Show timetable card and controls
-    timetableCard.style.display = 'block';
-    stationControls.style.display = 'block';
-
-    // Reset departure variables
-    actualDepartureTime = null;
-    currentStopIndex = 0;
-    timerDisplay.textContent = '--:--';
-    currentStationEl.textContent = '';
-    statusDiv.textContent = '';
+  // Show timetable and station control sections
+  timetableCard.style.display = 'block';
+  stationControls.style.display = 'block';
+  
+  // Reset UI state
+  currentStationEl.textContent = selectedRoute.stops[0];
+  timerDisplay.textContent = '00:00';
+  statusDiv.textContent = 'Waiting for departure...';
 });
+
 
 
 
@@ -493,6 +517,7 @@ populateRoutesSelect(); populateAdminLists(); renderActiveDrivers();
 </script>
 </body>
 </html>
+
 
 
 
