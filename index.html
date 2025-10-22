@@ -686,8 +686,8 @@ nextBtn.addEventListener('click', ()=>{
 
   // send audio trigger to bot (if available)
   const station = selectedRoute.stops[currentStopIndex];
-  if(http://localhost:3000/next-station){
-    fetch(http://localhost:3000/next-station, {
+  if(DISCORD_BOT_ENDPOINT){
+    fetch(DISCORD_BOT_ENDPOINT, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ station: station, driver: CURRENT_USER, route: selectedRouteName })
@@ -910,4 +910,5 @@ initUI();
 </script>
 </body>
 </html>
+
 
