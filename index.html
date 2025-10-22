@@ -66,6 +66,20 @@ th{color:#fff;background:linear-gradient(90deg,var(--accent),#ff907a);border-rad
 <div id="loginMsg" class="mutedSmall" style="margin-top:8px;color:#ffb4b4"></div>
 </div>
 
+  <select id="lineSelect"></select>
+<button id="confirmBtn">Load Timetable</button>
+<div id="timetableCard" style="display:none;">
+  <table>
+    <tbody id="timetableBody"></tbody>
+  </table>
+</div>
+<div id="stationControls" style="display:none;">
+  <div id="currentStation"></div>
+  <div id="timerDisplay"></div>
+  <div id="statusDiv"></div>
+</div>
+
+
 <div id="driverControls" style="display:none;margin-top:12px">
 <h3 style="margin:0 0 8px 0">Driver Controls</h3>
 <label>Choose Line</label>
@@ -306,6 +320,22 @@ loginBtn.addEventListener('click', () => {
         return;
     }
 
+  function getNextDeparture(nowDate, freq) {
+  // freq = minutes between departures
+  const next = new Date(nowDate);
+  const mins = next.getMinutes();
+  const rem = mins % freq;
+  const add = rem === 0 ? 0 : freq - rem;
+  next.setMinutes(mins + add);
+  next.setSeconds(0, 0);
+  return next;
+}
+
+function formatTime(d) {
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+
     // success
     CURRENT_USER = u;
     CURRENT_USER_IS_ADMIN = !!rec.admin;
@@ -322,6 +352,37 @@ loginBtn.addEventListener('click', () => {
 
     populateRoutesSelect();
     populateAdminLists();
+});
+
+  confirmBtn.addEventListener('click', () => {
+  if (!CURRENT_USER) {
+    alert("Please login first.");
+    return;
+  }
+
+  selectedRouteName = lineSelect.value;
+  selectedRoute = ROUTES[selectedRouteName];
+
+  if (!selectedRoute) {
+    alert("Route not found!");
+    return;
+  }
+
+  // Calculate next departure time using frequency
+  const nextDeparture = getNextDeparture(new Date(), selectedRoute.freq);
+  nextDepartureEl.textContent = formatTime(nextDeparture);
+
+  // Render the timetable
+  renderDynamicTimetable(selectedRoute, nextDeparture);
+
+  // Show timetable and station control sections
+  timetableCard.style.display = 'block';
+  stationControls.style.display = 'block';
+  
+  // Reset UI state
+  currentStationEl.textContent = selectedRoute.stops[0];
+  timerDisplay.textContent = '00:00';
+  statusDiv.textContent = 'Waiting for departure...';
 });
 
 
@@ -393,6 +454,7 @@ function getNextDeparture(nowDate, freq) {
     currentTime.setMinutes(currentTime.getMinutes() + 1); // 1 min per stop
   });
 }
+
 
 
 function formatTime(d) {
@@ -517,6 +579,7 @@ populateRoutesSelect(); populateAdminLists(); renderActiveDrivers();
 </script>
 </body>
 </html>
+
 
 
 
