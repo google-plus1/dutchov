@@ -388,9 +388,85 @@ function loadRoute(){
   updateTimeDisplays();
 }
 
+  function getNextScheduledDeparture(freqMinutes) {
+    const now = new Date();
+    const next = new Date(now);
+    // Round down to last scheduled time
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    const nextMinutes = Math.ceil(minutes / freqMinutes) * freqMinutes;
+    next.setHours(Math.floor(nextMinutes / 60));
+    next.setMinutes(nextMinutes % 60);
+    next.setSeconds(0);
+    return next;
+}
+
+  function updateDepartureStatus(departureTime, scheduledTime) {
+    const diffSec = Math.round((departureTime - scheduledTime) / 1000);
+    const diffMin = Math.floor(Math.abs(diffSec)/60);
+    const diffRem = Math.abs(diffSec)%60;
+    const sign = diffSec > 0 ? '+' : '-';
+    let statusText = '';
+    if(diffSec < 0) statusText = `Too Early ${sign}${diffMin}:${pad(diffRem)}`;
+    else if(diffSec === 0) statusText = 'On Time ✅';
+    else statusText = `Late ${sign}${diffMin}:${pad(diffRem)}`;
+    return statusText;
+}
+
+  function renderDynamicTimetable(route, departTime) {
+    tableBody.innerHTML = '';
+    if(!route) return;
+
+    const scheduledStart = getNextScheduledDeparture(route.freq);
+
+    route.stops.forEach((stop, i) => {
+        const tr = document.createElement('tr');
+        const tdStop = document.createElement('td');
+        tdStop.textContent = stop;
+        const tdTime = document.createElement('td');
+        const arrival = new Date((departTime || scheduledStart).getTime() + i*60000);
+
+        tdTime.textContent = formatTime(arrival);
+
+        if(departTime) {
+            const deltaSec = Math.round((arrival - (new Date(scheduledStart.getTime() + i*60000)))/1000);
+            if(deltaSec !== 0) {
+                const sign = deltaSec > 0 ? '+' : '-';
+                const span = document.createElement('span');
+                span.style.fontSize = '12px';
+                span.style.marginLeft = '6px';
+                span.textContent = `${sign}${Math.floor(Math.abs(deltaSec)/60)}:${pad(Math.abs(deltaSec)%60)}`;
+                span.style.background = deltaSec > 0 ? 'rgba(228,63,90,0.12)' : 'rgba(28,200,138,0.06)';
+                tdTime.appendChild(span);
+            }
+        }
+        tr.appendChild(tdStop);
+        tr.appendChild(tdTime);
+        tableBody.appendChild(tr);
+    });
+
+    // update main next departure display
+    nextDepartureEl.textContent = formatTime(scheduledStart);
+}
+
 
 // ------------------------- STATION CONTROL BUTTONS -------------------------
-departBtn.addEventListener('click',()=>{if(currentStopIndex<selectedRoute.stops.length){currentStationEl.textContent=selectedRoute.stops[currentStopIndex];statusDiv.textContent='En route...';nextBtn.disabled=false;}});
+departBtn.addEventListener('click', () => {
+    if(!selectedRoute) { alert('Load a route first'); return; }
+
+    const scheduledStart = getNextScheduledDeparture(selectedRoute.freq);
+    actualDepartureTime = new Date();
+    
+    const status = updateDepartureStatus(actualDepartureTime, scheduledStart);
+    statusDiv.textContent = `Departure Status: ${status}`;
+
+    // render timetable with delta indicators
+    renderDynamicTimetable(selectedRoute, actualDepartureTime);
+
+    // start stop timer etc.
+    currentStopIndex = 0;
+    startStopTimerForIndex(currentStopIndex);
+});
+
 nextBtn.addEventListener('click',()=>{currentStopIndex++; if(currentStopIndex>=selectedRoute.stops.length){statusDiv.textContent='End of route';nextBtn.disabled=true;}else{currentStationEl.textContent=selectedRoute.stops[currentStopIndex];}});
 endBtn.addEventListener('click',()=>{currentStopIndex=0;currentStationEl.textContent='';statusDiv.textContent='Route ended';stationControls.style.display='none';});
 
@@ -436,4 +512,5 @@ populateAdminLists();
 </script>
 </body>
 </html>
+
 
