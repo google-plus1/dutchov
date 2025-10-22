@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OVS</title>
+<style>
+:root{
+  --bg:#0f1724; --card:#0b1220; --accent:#ff6b6b;
+  --muted:#9aa4c0; --good:#1cc88a; --bad:#e43f5a; --panel:#0f3460;
+}
+*{box-sizing:border-box}
+body{margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+background:linear-gradient(180deg,#071024 0%, #0e1530 100%); color:#edf2f7;
+-webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;}
+header{padding:18px 24px;border-bottom:1px solid rgba(255,255,255,.03);
+display:flex;align-items:center;gap:12px}
+h1{margin:0;font-size:18px}
+.wrap{display:flex;gap:20px;padding:20px;max-width:1200px;margin:20px auto}
+.card{background:var(--card);border-radius:12px;padding:18px;width:360px;box-shadow:0 6px 30px rgba(2,6,23,.6)}
+.wide{flex:1;min-width:360px;padding:18px}
+label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
+input,select,textarea,button{width:100%;padding:10px;border-radius:8px;border:0;font-size:14px}
+textarea{min-height:88px;resize:vertical} button{background:var(--accent);color:#fff;border:0;cursor:pointer}
+.muted{color:var(--muted);font-size:13px}
+.infoRow{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:10px}
+.big{font-weight:700;font-size:18px}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{padding:8px;text-align:left;border-bottom:1px solid rgba(255,255,255,.03);font-size:14px}
+th{color:#fff;background:linear-gradient(90deg,var(--accent),#ff907a);border-radius:6px}
+.smallBtn{padding:6px 8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,.06);color:var(--muted);cursor:pointer}
+#activeDrivers{position:fixed;left:18px;bottom:18px;background:var(--panel);padding:12px;border-radius:10px;min-width:200px;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+#activeDrivers h3{margin:0 0 6px 0;color:var(--good);font-size:14px}
+.timer{margin-top:12px;padding:10px;border-radius:8px;text-align:center;font-weight:700;font-size:20px;color:#fff;background:var(--good);min-width:120px}
+.status{margin-top:8px;font-weight:600}
+.adminPanel{background:#07183a;padding:12px;border-radius:10px}
+.row{display:flex;gap:8px}
+.row > *{flex:1}
+.mutedSmall{font-size:12px;color:var(--muted)}
+.logItem{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px;border-radius:6px;background:rgba(255,255,255,.02);margin-bottom:8px}
+.danger{background:rgba(228,63,90,.08);border:1px solid rgba(228,63,90,.12);color:var(--bad);padding:6px 8px;border-radius:8px}
+.ok{background:rgba(28,200,138,.06);border:1px solid rgba(28,200,138,.12);color:var(--good);padding:6px 8px;border-radius:8px}
+.inlineSmall{display:inline-block;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.02);color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<header>
+<h1>Openbaar Vervoer Systeem</h1>
+<div style="margin-left:auto" class="mutedSmall">Local demo — data saved in browser storage</div>
+</header>
+
+<div class="wrap">
+
+<!-- LEFT: LOGIN + DRIVER CONTROLS -->
+<div class="card">
+<div id="loginSection">
+<h2 style="margin:0 0 8px 0">Login</h2>
+<label>Username</label>
+<input id="username" placeholder="username" />
+<label>Password</label>
+<input id="password" type="password" placeholder="password" />
+<div style="display:flex;gap:8px;margin-top:8px">
+<button id="loginBtn">Login</button>
+<button id="logoutBtn" style="display:none;background:#6c757d">Logout</button>
+</div>
+<div id="loginMsg" class="mutedSmall" style="margin-top:8px;color:#ffb4b4"></div>
+</div>
+
+<div id="driverControls" style="display:none;margin-top:12px">
+<h3 style="margin:0 0 8px 0">Driver Controls</h3>
+<label>Choose Line</label>
+<select id="lineSelect"></select>
+<div style="display:flex;gap:8px;margin-top:8px">
+<button id="confirmBtn">Load Timetable</button>
+<button id="reverseBtn" title="Toggle original/return" class="smallBtn">Reverse</button>
+</div>
+<div class="infoRow">
+<div>
+<div class="mutedSmall">Current time</div>
+<div id="currentTime" class="big"></div>
+</div>
+<div style="text-align:right">
+<div class="mutedSmall">Next departure</div>
+<div id="nextDeparture" class="big">--:--</div>
+</div>
+</div>
+<div style="margin-top:10px">
+<div class="mutedSmall">Countdown to next departure</div>
+<div id="countdown" class="timer">--:--</div>
+</div>
+
+<div id="stationControls" style="display:none;margin-top:12px">
+<div style="display:flex;gap:8px">
+<button id="departBtn">Depart</button>
+<button id="nextBtn" disabled>Next Station</button>
+<button id="endBtn">End Route</button>
+</div>
+<div id="currentStation" class="status" style="margin-top:6px"></div>
+<div id="timerDisplay" class="timer" style="margin-top:10px;background:var(--good)">--:--</div>
+<div id="status" class="status mutedSmall"></div>
+<div style="margin-top:8px" class="mutedSmall">*Next Station button only in last 15s before arrival or when late.</div>
+</div>
+</div>
+</div>
+
+<!-- MIDDLE: TIMETABLE / LOGS -->
+<div class="wide card" style="min-width:520px">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<h2 style="margin:0">Panel</h2>
+<div id="userBadge" class="inlineSmall" style="display:none"></div>
+</div>
+
+<div id="timetableCard" style="margin-top:12px; display:none">
+<div class="mutedSmall">Timetable for <strong id="tableTitle"></strong></div>
+<table id="timetableTable">
+<thead><tr><th>Stop</th><th>Arrival</th></tr></thead>
+<tbody id="tableBody"></tbody>
+</table>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="adminPanel" style="margin-top:16px;display:none" class="adminPanel">
+<h3 style="margin:0 0 8px 0;color:var(--good)">Admin Panel</h3>
+<div style="display:flex;gap:10px">
+<div style="flex:1">
+<label>New Route name</label>
+<input id="newRouteName" placeholder="e.g. Lijn X" />
+<label>Frequency (minutes)</label>
+<input id="newRouteFreq" placeholder="10" />
+<label>Stops (one per line or comma separated)</label>
+<textarea id="newRouteStops" placeholder="Spawn&#10;Chinatown&#10;Fire Department"></textarea>
+<div style="display:flex;gap:8px;margin-top:8px">
+<button id="addRouteBtn">Add Route</button>
+<button id="refreshRoutesBtn" class="smallBtn">Refresh</button>
+</div>
+<hr style="border:none;border-top:1px solid rgba(255,255,255,.03);margin:12px 0">
+<label>Create User</label>
+<input id="newUsername" placeholder="username">
+<input id="newPassword" type="password" placeholder="password">
+<button id="createUserBtn" style="margin-top:6px">Create User</button>
+<label style="margin-top:10px">Give Strikes</label>
+<select id="strikeSelect"></select>
+<input id="strikeAmount" placeholder="Number of strikes" type="number">
+<button id="giveStrikeBtn" style="margin-top:6px">Give Strike</button>
+</div>
+
+<div style="width:260px">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div class="mutedSmall">Routes</div>
+<div class="mutedSmall">Actions</div>
+</div>
+<div id="routesList" style="margin-top:8px;max-height:280px;overflow:auto"></div>
+<div style="margin-top:12px" class="mutedSmall">Shift Logs</div>
+<div id="logsList" style="margin-top:8px;max-height:220px;overflow:auto"></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ACTIVE DRIVERS -->
+<div id="activeDrivers" style="display:none">
+<h3>Active Drivers</h3>
+<ul id="driversList" style="margin:0;padding-left:18px"></ul>
+</div>
+
+<script>
+// FULL JAVASCRIPT IMPLEMENTATION
+// Login / Logout
+let USERS = JSON.parse(localStorage.getItem('erlc_users_v4') || '{}');
+let ROUTES = JSON.parse(localStorage.getItem('erlc_routes_v4') || '{}');
+let LOGS = JSON.parse(localStorage.getItem('erlc_logs_v4') || '[]');
+let ACTIVE_DRIVERS = JSON.parse(localStorage.getItem('erlc_activeDrivers_v4') || '[]');
+let STRIKES = JSON.parse(localStorage.getItem('erlc_strikes_v4') || '{}');
+let ROUTE_OWNERS = JSON.parse(localStorage.getItem('erlc_routeOwners_v4') || '{}');
+
+const defaultUsers = {
+"admin": {pw:"admin123", admin:true},
+"driver": {pw:"driver123", admin:false}
+};
+const defaultRoutes = {
+"Lijn 6": {freq:10, stops:["Spawn","Fire Department","Central Park","P+R Transferium","Farms","Highrock"]},
+"Lijn 7 Shuttlebus": {freq:10, stops:["Spawn","Fire Department","Central Park","Hospital"]}
+};
+
+function saveAll(){ localStorage.setItem('erlc_users_v4',JSON.stringify(USERS));
+localStorage.setItem('erlc_routes_v4',JSON.stringify(ROUTES));
+localStorage.setItem('erlc_logs_v4',JSON.stringify(LOGS));
+localStorage.setItem('erlc_activeDrivers_v4',JSON.stringify(ACTIVE_DRIVERS));
+localStorage.setItem('erlc_strikes_v4',JSON.stringify(STRIKES));
+localStorage.setItem('erlc_routeOwners_v4',JSON.stringify(ROUTE_OWNERS));}
+
+function loadDefaults(){
+if(Object.keys(USERS).length===0){ USERS = defaultUsers; }
+if(Object.keys(ROUTES).length===0){
+  ROUTES = JSON.parse(JSON.stringify(defaultRoutes));
+  for(const name in defaultRoutes){
+    const rev = name + " 2";
+    if(!ROUTES[rev]) ROUTES[rev] = {freq:defaultRoutes[name].freq, stops:[...defaultRoutes[name].stops].reverse()};
+  }
+}
+saveAll();
+}
+loadDefaults();
+
+// DOM Elements
+const usernameEl=document.getElementById('username');
+const passwordEl=document.getElementById('password');
+const loginBtn=document.getElementById('loginBtn');
+const logoutBtn=document.getElementById('logoutBtn');
+const loginMsg=document.getElementById('loginMsg');
+const driverControls=document.getElementById('driverControls');
+const lineSelect=document.getElementById('lineSelect');
+const confirmBtn=document.getElementById('confirmBtn');
+const reverseBtn=document.getElementById('reverseBtn');
+const currentTimeEl=document.getElementById('currentTime');
+const nextDepartureEl=document.getElementById('nextDeparture');
+const countdownEl=document.getElementById('countdown');
+const stationControls=document.getElementById('stationControls');
+const departBtn=document.getElementById('departBtn');
+const nextBtn=document.getElementById('nextBtn');
+const endBtn=document.getElementById('endBtn');
+const currentStationEl=document.getElementById('currentStation');
+const timerDisplay=document.getElementById('timerDisplay');
+const statusDiv=document.getElementById('status');
+const timetableCard=document.getElementById('timetableCard');
+const tableTitle=document.getElementById('tableTitle');
+const tableBody=document.getElementById('tableBody');
+const userBadge=document.getElementById('userBadge');
+const adminPanel=document.getElementById('adminPanel');
+const routesList=document.getElementById('routesList');
+const logsList=document.getElementById('logsList');
+const newRouteName=document.getElementById('newRouteName');
+const newRouteFreq=document.getElementById('newRouteFreq');
+const newRouteStops=document.getElementById('newRouteStops');
+const addRouteBtn=document.getElementById('addRouteBtn');
+const refreshRoutesBtn=document.getElementById('refreshRoutesBtn');
+const newUsername=document.getElementById('newUsername');
+const newPassword=document.getElementById('newPassword');
+const createUserBtn=document.getElementById('createUserBtn');
+const strikeSelect=document.getElementById('strikeSelect');
+const strikeAmount=document.getElementById('strikeAmount');
+const giveStrikeBtn=document.getElementById('giveStrikeBtn');
+const activeDriversDiv=document.getElementById('activeDrivers');
+const driversList=document.getElementById('driversList');
+
+// State
+let CURRENT_USER=null;
+let CURRENT_USER_IS_ADMIN=false;
+let selectedRouteName=null;
+let selectedRoute=null;
+let useReverse=false;
+let actualDepartureTime=null;
+let currentStopIndex=0;
+let timerInterval=null;
+let nextDepartureTimeForRoute=null;
+
+// UTILS
+function pad(n){return String(n).padStart(2,'0');}
+function formatTime(date){return pad(date.getHours())+':'+pad(date.getMinutes());}
+function formatTimeWithSeconds(date){return pad(date.getHours())+':'+pad(date.getMinutes())+':'+pad(date.getSeconds());}
+
+// Clock update
+setInterval(()=>{
+let now=new Date();
+currentTimeEl.textContent=formatTimeWithSeconds(now);
+},1000);
+
+// Login
+loginBtn.addEventListener('click',()=>{
+const u=usernameEl.value.trim();
+const p=passwordEl.value.trim();
+if(!USERS[u]){ loginMsg.textContent='User not found'; return; }
+if(USERS[u].pw!==p){ loginMsg.textContent='Wrong password'; return; }
+CURRENT_USER=u; CURRENT_USER_IS_ADMIN=USERS[u].admin;
+loginMsg.textContent=''; loginBtn.style.display='none'; logoutBtn.style.display='inline-block';
+driverControls.style.display='block';
+userBadge.style.display='inline-block'; userBadge.textContent=u+(CURRENT_USER_IS_ADMIN?' (admin)':'');
+if(CURRENT_USER_IS_ADMIN) adminPanel.style.display='block';
+populateRoutesSelect(); populateAdminLists(); renderActiveDrivers();
+if(!ACTIVE_DRIVERS.includes(u)) ACTIVE_DRIVERS.push(u); saveAll();
+});
+
+// Logout
+logoutBtn.addEventListener('click',()=>{ CURRENT_USER=null; CURRENT_USER_IS_ADMIN=false;
+loginBtn.style.display='inline-block'; logoutBtn.style.display='none';
+driverControls.style.display='none'; adminPanel.style.display='none'; userBadge.style.display='none';
+if(timerInterval) clearInterval(timerInterval); timerInterval=null;
+ACTIVE_DRIVERS=ACTIVE_DRIVERS.filter(a=>a!==CURRENT_USER); saveAll(); renderActiveDrivers();
+});
+
+// Populate Routes Select
+function populateRoutesSelect(){ lineSelect.innerHTML=''; Object.keys(ROUTES).sort().forEach(n=>{
+const opt=document.createElement('option'); opt.value=n; opt.textContent=n; lineSelect.appendChild(opt);
+}); if(lineSelect.options.length) lineSelect.value=lineSelect.options[0].value;}
+
+// Render Admin lists
+function populateAdminLists(){
+routesList.innerHTML=''; Object.keys(ROUTES).sort().forEach(name=>{
+const div=document.createElement('div'); div.style.display='flex'; div.style.justifyContent='space-between'; div.style.alignItems='center'; div.style.marginBottom='8px';
+const left=document.createElement('div'); left.innerHTML=`<strong>${name}</strong> <div class="mutedSmall">${ROUTES[name].freq} min — ${ROUTES[name].stops.length} stops</div>`;
+const right=document.createElement('div'); const delBtn=document.createElement('button'); delBtn.className='smallBtn'; delBtn.textContent='Delete';
+delBtn.addEventListener('click',()=>{ if(!confirm(`Delete route "${name}" and its reverse?`)) return; delete ROUTES[name]; const rev=name.endsWith(' 2')? name.replace(/ 2$/,'') : name+' 2'; if(ROUTES[rev]) delete ROUTES[rev]; saveAll(); populateRoutesSelect(); populateAdminLists(); });
+right.appendChild(delBtn); div.appendChild(left); div.appendChild(right); routesList.appendChild(div);
+});
+// Users for strikes
+strikeSelect.innerHTML=''; Object.keys(USERS).sort().forEach(u=>{ const opt=document.createElement('option'); opt.value=u; opt.textContent=u; strikeSelect.appendChild(opt); });
+renderLogs();
+}
+
+// Render Logs
+function renderLogs(){
+logsList.innerHTML=''; if(!LOGS.length){ logsList.textContent='No shift logs'; return; }
+LOGS.forEach((l,idx)=>{ const wrap=document.createElement('div'); wrap.className='logItem';
+const left=document.createElement('div'); left.innerHTML=`<strong>${l.user}</strong> - ${l.route}<div class="mutedSmall">${new Date(l.time).toLocaleString()}</div>`;
+const right=document.createElement('div'); const del=document.createElement('button'); del.className='smallBtn'; del.textContent='Delete';
+del.addEventListener('click',()=>{ if(!confirm('Delete this log?')) return; LOGS.splice(idx,1); saveAll(); renderLogs(); });
+right.appendChild(del); wrap.appendChild(left); wrap.appendChild(right); logsList.appendChild(wrap);
+});
+}
+
+// Render Active Drivers
+function renderActiveDrivers(){ driversList.innerHTML=''; ACTIVE_DRIVERS.forEach(d=>{ const li=document.createElement('li'); li.textContent=d; driversList.appendChild(li); });
+activeDriversDiv.style.display=ACTIVE_DRIVERS.length?'block':'none';
+}
+
+// Load Timetable
+confirmBtn.addEventListener('click',()=>{
+selectedRouteName=lineSelect.value; selectedRoute=ROUTES[selectedRouteName];
+useReverse=false; currentStopIndex=0;
+actualDepartureTime=null; clearInterval(timerInterval); timerInterval=null;
+timetableCard.style.display='block'; tableTitle.textContent=selectedRouteName;
+renderTimetable(); stationControls.style.display='block';
+setupCountdown();
+});
+
+// Reverse
+reverseBtn.addEventListener('click',()=>{ useReverse=!useReverse; if(useReverse) selectedRouteName+='+R'; renderTimetable(); });
+
+// Departure / Next / End
+departBtn.addEventListener('click',()=>{
+if(!selectedRoute) return; actualDepartureTime=new Date(); currentStopIndex=0;
+startArrivalCountdown(); nextBtn.disabled=false;
+statusDiv.textContent='Departed'; renderTimetable();
+});
+
+nextBtn.addEventListener('click',()=>{ currentStopIndex++; if(currentStopIndex>=selectedRoute.stops.length-1){ nextBtn.disabled=true; return; } renderTimetable(); startArrivalCountdown(); });
+
+endBtn.addEventListener('click',()=>{ actualDepartureTime=null; currentStopIndex=0; clearInterval(timerInterval); timerInterval=null;
+timerDisplay.textContent='--:--'; statusDiv.textContent='Route ended'; nextBtn.disabled=true; renderTimetable(); });
+
+// Add / Refresh / Create / Strikes
+addRouteBtn.addEventListener('click',()=>{
+const name=newRouteName.value.trim(); if(!name) return alert('Route name required');
+const freq=parseInt(newRouteFreq.value)||10;
+let stops=newRouteStops.value.split(/\n|,/).map(s=>s.trim()).filter(Boolean); if(!stops.length) return alert('Stops required');
+ROUTES[name]={freq,stops}; const rev=name+' 2'; ROUTES[rev]={freq,stops:[...stops].reverse()}; saveAll(); populateRoutesSelect(); populateAdminLists(); alert('Route added'); });
+
+refreshRoutesBtn.addEventListener('click',()=>{ populateRoutesSelect(); populateAdminLists(); });
+
+createUserBtn.addEventListener('click',()=>{ const u=newUsername.value.trim(); const p=newPassword.value.trim(); if(!u||!p) return; if(USERS[u]) return alert('User exists'); USERS[u]={pw:p,admin:false}; saveAll(); populateAdminLists(); alert('User created'); });
+
+giveStrikeBtn.addEventListener('click',()=>{ const u=strikeSelect.value; const amt=parseInt(strikeAmount.value)||1; STRIKES[u]=(STRIKES[u]||0)+amt; saveAll(); alert(`Gave ${amt} strike(s) to ${u}`); });
+
+// TIMETABLE RENDER
+function renderTimetable(){
+if(!selectedRoute) return;
+tableBody.innerHTML='';
+const now=new Date();
+selectedRoute.stops.forEach((stop,i)=>{
+let scheduled=new Date(actualDepartureTime||now);
+scheduled.setMinutes(scheduled.getMinutes()+i); // 1 min per stop
+let display=formatTime(scheduled); let delta='';
+if(actualDepartureTime){
+let arrivalTime=new Date(actualDepartureTime); arrivalTime.setMinutes(arrivalTime.getMinutes()+i);
+let diff=Math.round((now-arrivalTime)/60000);
+if(diff>0){ delta='+'+diff; } else if(diff<0){ delta=diff; } else delta='0'; display=formatTime(arrivalTime)+' '+delta; }
+const tr=document.createElement('tr');
+tr.innerHTML=`<td>${stop}</td><td>${display}</td>`; tableBody.appendChild(tr);
+});
+}
+
+// COUNTDOWN
+function setupCountdown(){
+if(timerInterval) clearInterval(timerInterval);
+timerInterval=setInterval(()=>{
+if(!selectedRoute) return;
+const freq=selectedRoute.freq; const now=new Date();
+let minutes=Math.ceil(now.getMinutes()/freq)*freq; nextDepartureTimeForRoute=new Date(now); nextDepartureTimeForRoute.setMinutes(minutes); nextDepartureTimeForRoute.setSeconds(0);
+const diffSec=Math.round((nextDepartureTimeForRoute-now)/1000);
+let min=Math.floor(Math.abs(diffSec)/60),sec=Math.abs(diffSec)%60;
+countdownEl.textContent=(diffSec>=0?'-':'+')+pad(min)+':'+pad(sec);
+},1000);
+}
+
+// ARRIVAL COUNTDOWN
+function startArrivalCountdown(){
+if(!actualDepartureTime) return;
+if(timerInterval) clearInterval(timerInterval);
+timerInterval=setInterval(()=>{
+const now=new Date(); const scheduled=new Date(actualDepartureTime); scheduled.setMinutes(scheduled.getMinutes()+currentStopIndex+1); // next stop
+let diff=Math.round((scheduled-now)/1000); let late=false;
+if(diff<0){ late=true; diff=Math.abs(diff); timerDisplay.style.background='var(--bad)'; statusDiv.textContent='Late'; } else { timerDisplay.style.background='var(--good)'; statusDiv.textContent='On Time'; }
+let m=Math.floor(diff/60), s=diff%60; timerDisplay.textContent=pad(m)+':'+pad(s);
+renderTimetable();
+},1000);
+}
+
+// INITIAL Populate
+populateRoutesSelect(); populateAdminLists(); renderActiveDrivers();
+</script>
+</body>
+</html>
+
