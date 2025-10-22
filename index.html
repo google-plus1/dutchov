@@ -312,6 +312,16 @@ function populateAdminLists(){
     const delBtn=document.createElement('button');delBtn.textContent='X';delBtn.className='smallBtn';
     delBtn.onclick=()=>{if(confirm(`Delete route ${name}?`)){delete ROUTES[name]; save(STORAGE_ROUTES,ROUTES);populateAdminLists();populateRoutesSelect();}};
     right.appendChild(delBtn);div.appendChild(left);div.appendChild(right);routesList.appendChild(div);
+    const editBtn = document.createElement('button');
+editBtn.className = 'smallBtn';
+editBtn.textContent = 'Edit';
+editBtn.addEventListener('click', () => {
+  newRouteName.value = name;
+  newRouteFreq.value = ROUTES[name].freq;
+  newRouteStops.value = ROUTES[name].stops.join('\n');
+});
+right.appendChild(editBtn);
+
   });
   // logs
   logsList.innerHTML='';
@@ -352,23 +362,32 @@ confirmBtn.addEventListener('click',()=>loadRoute());
 reverseBtn.addEventListener('click',()=>{useReverse=!useReverse;loadRoute();});
 
 function loadRoute(){
-  selectedRouteName=lineSelect.value;
-  selectedRoute=ROUTES[selectedRouteName];
+  selectedRouteName = lineSelect.value;
+  selectedRoute = ROUTES[selectedRouteName];
   if(!selectedRoute) return;
+
   // setup table
-  tableTitle.textContent=selectedRouteName;
-  tableBody.innerHTML='';
-  const stops = useReverse?[...selectedRoute.stops].reverse():selectedRoute.stops;
-  stops.forEach(s=>{
-    const tr=document.createElement('tr');tr.innerHTML=`<td>${s}</td><td>--:--</td>`;tableBody.appendChild(tr);
+  tableTitle.textContent = selectedRouteName;
+  tableBody.innerHTML = '';
+
+  const stops = useReverse ? [...selectedRoute.stops].reverse() : selectedRoute.stops;
+
+  const now = new Date();
+  stops.forEach((stop, index) => {
+    const arrivalTime = new Date(now.getTime() + index * selectedRoute.freq * 60000);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${stop}</td><td>${arrivalTime.getHours().toString().padStart(2,'0')}:${arrivalTime.getMinutes().toString().padStart(2,'0')}</td>`;
+    tableBody.appendChild(tr);
   });
-  timetableCard.style.display='block';
-  currentStopIndex=0;
-  stationControls.style.display='block';
-  actualDepartureTime=new Date();
-  nextDepartureTimeForRoute=new Date(Date.now()+selectedRoute.freq*60000);
+
+  timetableCard.style.display = 'block';
+  currentStopIndex = 0;
+  stationControls.style.display = 'block';
+  actualDepartureTime = new Date();
+  nextDepartureTimeForRoute = new Date(now.getTime() + selectedRoute.freq * 60000);
   updateTimeDisplays();
 }
+
 
 // ------------------------- STATION CONTROL BUTTONS -------------------------
 departBtn.addEventListener('click',()=>{if(currentStopIndex<selectedRoute.stops.length){currentStationEl.textContent=selectedRoute.stops[currentStopIndex];statusDiv.textContent='En route...';nextBtn.disabled=false;}});
@@ -390,6 +409,19 @@ giveStrikeBtn.addEventListener('click',()=>{
   STRIKES[u]=(STRIKES[u]||0)+n; save(STORAGE_STRIKES,STRIKES); alert(`Gave ${n} strike(s) to ${u}`); strikeAmount.value='';
 });
 
+  const removeStrikeBtn = document.createElement('button');
+removeStrikeBtn.textContent = 'Remove Strike';
+removeStrikeBtn.style.marginTop = '6px';
+removeStrikeBtn.addEventListener('click', ()=>{
+  const u = strikeSelect.value;
+  const amt = parseInt(strikeAmount.value||'1',10);
+  if(!STRIKES[u]) STRIKES[u] = 0;
+  STRIKES[u] = Math.max(0, STRIKES[u]-amt);
+  saveStrikesAndRefresh();
+  alert(`Removed ${amt} strike(s) from ${u}. Total: ${STRIKES[u]}`);
+});
+
+  
 addRouteBtn.addEventListener('click',()=>{
   const n=newRouteName.value.trim(); const f=parseInt(newRouteFreq.value); const stops=newRouteStops.value.split(/[\n,]+/).map(x=>x.trim()).filter(Boolean);
   if(!n||!f||stops.length<1){alert('Enter valid route info');return;}
@@ -404,3 +436,4 @@ populateAdminLists();
 </script>
 </body>
 </html>
+
