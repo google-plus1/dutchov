@@ -275,19 +275,55 @@ currentTimeEl.textContent=formatTimeWithSeconds(now);
 },1000);
 
 // Login
-loginBtn.addEventListener('click',()=>{
-const u=usernameEl.value.trim();
-const p=passwordEl.value.trim();
-if(!USERS[u]){ loginMsg.textContent='User not found'; return; }
-if(USERS[u].pw!==p){ loginMsg.textContent='Wrong password'; return; }
-CURRENT_USER=u; CURRENT_USER_IS_ADMIN=USERS[u].admin;
-loginMsg.textContent=''; loginBtn.style.display='none'; logoutBtn.style.display='inline-block';
-driverControls.style.display='block';
-userBadge.style.display='inline-block'; userBadge.textContent=u+(CURRENT_USER_IS_ADMIN?' (admin)':'');
-if(CURRENT_USER_IS_ADMIN) adminPanel.style.display='block';
-populateRoutesSelect(); populateAdminLists(); renderActiveDrivers();
-if(!ACTIVE_DRIVERS.includes(u)) ACTIVE_DRIVERS.push(u); saveAll();
+loginBtn.addEventListener('click', () => {
+    const u = usernameEl.value.trim();
+    const p = passwordEl.value;
+    loginMsg.textContent = '';
+
+    if (!u || !p) {
+        loginMsg.textContent = 'Enter username & password';
+        return;
+    }
+
+    // load users from localStorage, fallback to defaults
+    let USERS = JSON.parse(localStorage.getItem('erlc_users_v4') || '{}');
+    if (Object.keys(USERS).length === 0) {
+        USERS = {
+            "pwatg123admin": { pw: "utrechtov20092025", admin: true },
+            "Roidkyadmin": { pw: "Mohamed4obai", admin: true },
+            "Roidky": { pw: "Mohamed4obai", admin: false },
+            "pwatg123": { pw: "utrechtov20092025", admin: false },
+            "Ilias123": { pw: "Pass123", admin: false },
+            "milandepro7": { pw: "Utrechtov20702025", admin: false },
+            "blobvisje.": { pw: "pass123", admin: false }
+        };
+        localStorage.setItem('erlc_users_v4', JSON.stringify(USERS));
+    }
+
+    const rec = USERS[u];
+    if (!rec || rec.pw !== p) {
+        loginMsg.textContent = 'Invalid username or password';
+        return;
+    }
+
+    // success
+    CURRENT_USER = u;
+    CURRENT_USER_IS_ADMIN = !!rec.admin;
+    document.getElementById('loginSection').style.display = 'none';
+    driverControls.style.display = 'block';
+    logoutBtn.style.display = 'inline-block';
+    userBadge.style.display = 'inline-block';
+    userBadge.textContent = `${CURRENT_USER}${CURRENT_USER_IS_ADMIN ? ' (admin)' : ''}`;
+
+    if (!ACTIVE_DRIVERS.includes(CURRENT_USER)) {
+        ACTIVE_DRIVERS.push(CURRENT_USER);
+        saveActiveAndRefresh();
+    }
+
+    populateRoutesSelect();
+    populateAdminLists();
 });
+
 
 // Logout
 logoutBtn.addEventListener('click',()=>{ CURRENT_USER=null; CURRENT_USER_IS_ADMIN=false;
@@ -326,6 +362,18 @@ del.addEventListener('click',()=>{ if(!confirm('Delete this log?')) return; LOGS
 right.appendChild(del); wrap.appendChild(left); wrap.appendChild(right); logsList.appendChild(wrap);
 });
 }
+  /* ------------------------- Next departure calculation ------------------------- */
+function getNextDeparture(nowDate, freq) {
+    // freq in minutes
+    const next = new Date(nowDate);
+    const mins = next.getMinutes();
+    const rem = mins % freq;
+    const add = rem === 0 ? 0 : freq - rem;
+    next.setMinutes(mins + add);
+    next.setSeconds(0, 0);
+    return next;
+}
+
 
 // Render Active Drivers
 function renderActiveDrivers(){ driversList.innerHTML=''; ACTIVE_DRIVERS.forEach(d=>{ const li=document.createElement('li'); li.textContent=d; driversList.appendChild(li); });
@@ -333,14 +381,29 @@ activeDriversDiv.style.display=ACTIVE_DRIVERS.length?'block':'none';
 }
 
 // Load Timetable
-confirmBtn.addEventListener('click',()=>{
-selectedRouteName=lineSelect.value; selectedRoute=ROUTES[selectedRouteName];
-useReverse=false; currentStopIndex=0;
-actualDepartureTime=null; clearInterval(timerInterval); timerInterval=null;
-timetableCard.style.display='block'; tableTitle.textContent=selectedRouteName;
-renderTimetable(); stationControls.style.display='block';
-setupCountdown();
+confirmBtn.addEventListener('click', () => {
+    if (!CURRENT_USER) { loginMsg.textContent = 'Please login first'; return; }
+
+    selectedRouteName = lineSelect.value;
+    selectedRoute = ROUTES[selectedRouteName];
+
+    // compute next scheduled departure aligned to freq
+    const next = getNextDeparture(new Date(), selectedRoute.freq);
+
+    actualDepartureTime = null;
+    currentStopIndex = 0;
+    tableTitle.textContent = selectedRouteName;
+
+    // render timetable with correct arrival times
+    renderDynamicTimetable(selectedRoute, next);
+
+    timetableCard.style.display = 'block';
+    stationControls.style.display = 'block';
+    timerDisplay.textContent = '--:--';
+    currentStationEl.textContent = '';
+    statusDiv.textContent = '';
 });
+
 
 // Reverse
 reverseBtn.addEventListener('click',()=>{ useReverse=!useReverse; if(useReverse) selectedRouteName+='+R'; renderTimetable(); });
@@ -419,5 +482,6 @@ populateRoutesSelect(); populateAdminLists(); renderActiveDrivers();
 </script>
 </body>
 </html>
+
 
 
