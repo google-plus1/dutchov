@@ -174,12 +174,21 @@ let STRIKES = JSON.parse(localStorage.getItem('erlc_strikes_v4') || '{}');
 let ROUTE_OWNERS = JSON.parse(localStorage.getItem('erlc_routeOwners_v4') || '{}');
 
 const defaultUsers = {
-"admin": {pw:"admin123", admin:true},
-"driver": {pw:"driver123", admin:false}
+  "pwatg123admin": {pw:"utrechtov20092025", admin:true},
+  "Roidkyadmin": {pw:"Mohamed4obai", admin:true},
+  "Roidky": {pw:"Mohamed4obai", admin:false},
+  "pwatg123": {pw:"utrechtov20092025", admin:false},
+  "Ilias123": {pw:"Pass123", admin:false},
+  "milandepro7": {pw:"Utrechtov20702025", admin:false},
+  "blobvisje.": {pw:"pass123", admin:false}
 };
+
 const defaultRoutes = {
-"Lijn 6": {freq:10, stops:["Spawn","Fire Department","Central Park","P+R Transferium","Farms","Highrock"]},
-"Lijn 7 Shuttlebus": {freq:10, stops:["Spawn","Fire Department","Central Park","Hospital"]}
+  "Lijn 6": {freq:10, stops:["Spawn","Fire Department","Central Park","P+R Transferium","Farms","Highrock"]},
+  "Lijn 7 Shuttlebus": {freq:10, stops:["Spawn","Fire Department","Central Park","Hostpital"]},
+  "Lijn 8 Shuttlebus": {freq:10, stops:["Spawn","Repair shop","P+R Transferium"]},
+  "Lijn 9": {freq:10, stops:["Spawn","Chinatown","Fire Department","Central Park","Hospital","Farms","Highrock","Springfield"]},
+  "FastLine": {freq:8, stops:["Springfield","River City"]}
 };
 
 function saveAll(){ localStorage.setItem('erlc_users_v4',JSON.stringify(USERS));
@@ -410,4 +419,5 @@ populateRoutesSelect(); populateAdminLists(); renderActiveDrivers();
 </script>
 </body>
 </html>
+
 
