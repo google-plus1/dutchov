@@ -92,9 +92,9 @@ th{color:#fff;background:linear-gradient(90deg,var(--accent),#ff907a);border-rad
 
       <div id="stationControls" style="display:none;margin-top:12px">
         <div style="display:flex;gap:8px">
-          <button id="departBtn">Depart</button>
-          <button id="nextBtn" disabled>Next Station</button>
-          <button id="endBtn">End</button>
+          <button id="departBtn">Vertrek</button>
+          <button id="nextBtn" disabled>Volgende halte</button>
+          <button id="endBtn">Einde</button>
         </div>
         <div id="currentStation" class="status" style="margin-top:6px"></div>
         <div id="timerDisplay" class="timer" style="margin-top:10px;background:var(--good)">--:--</div>
@@ -107,7 +107,7 @@ th{color:#fff;background:linear-gradient(90deg,var(--accent),#ff907a);border-rad
   <!-- middle: timetable / logs -->
   <div class="wide card" style="min-width:520px">
     <div style="display:flex;justify-content:space-between;align-items:center">
-      <h2 style="margin:0">Timetable & Admin</h2>
+      <h2 style="margin:0">Paneel</h2>
       <div id="userBadge" class="inlineSmall" style="display:none"></div>
     </div>
 
@@ -126,7 +126,7 @@ th{color:#fff;background:linear-gradient(90deg,var(--accent),#ff907a);border-rad
       <div style="display:flex;gap:10px">
         <div style="flex:1">
           <label>New Route name</label>
-          <input id="newRouteName" placeholder="e.g. Line X" />
+          <input id="newRouteName" placeholder="e.g. Lijn X" />
           <label>Frequency (minutes)</label>
           <input id="newRouteFreq" placeholder="10" />
           <label>Stops (one per line or comma separated)</label>
@@ -194,16 +194,13 @@ const defaultUsers = {
 };
 
 const defaultRoutes = {
-  "Line A": {freq:10, stops:["Spawn","Fire Department","Central Park","P+R Transferium","Farms","Highrock"]},
-  "Line C": {freq:10, stops:["Spawn","Chinatown","Fire Department","Central Park","Hospital","Farms","Highrock","Springfield"]},
+  "Lijn 6": {freq:10, stops:["Spawn","Fire Department","Central Park","P+R Transferium","Farms","Highrock"]},
+  "Lijn 7 Shuttlebus": {freq:10, stops:["Spawn","Fire Department","Central Park","Hostpital"]},
+  "Lijn 8 Shuttlebus": {freq:10, stops:["Spawn","Repair shop","P+R Transferium"]},
+  "Lijn 9": {freq:10, stops:["Spawn","Chinatown","Fire Department","Central Park","Hospital","Farms","Highrock","Springfield"]},
   "FastLine": {freq:8, stops:["Springfield","River City"]}
 };
 
-  fetch('http://localhost:3000/next-station', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ station: 'Farms' })
-});
 
 
 /* -------------------------
@@ -695,8 +692,14 @@ nextBtn.addEventListener('click', ()=>{
     endRoute();
     return;
   }
+  
   startStopTimerForIndex(currentStopIndex);
+  fetch('http://localhost:3000/next-station', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ station: currentStation })
 });
+
 
 endBtn.addEventListener('click', endRoute);
 
@@ -835,6 +838,7 @@ initUI();
 </script>
 </body>
 </html>
+
 
 
 
