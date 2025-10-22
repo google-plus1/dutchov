@@ -382,27 +382,38 @@ activeDriversDiv.style.display=ACTIVE_DRIVERS.length?'block':'none';
 
 // Load Timetable
 confirmBtn.addEventListener('click', () => {
-    if (!CURRENT_USER) { loginMsg.textContent = 'Please login first'; return; }
+    if (!CURRENT_USER) {
+        loginMsg.textContent = 'Please login first';
+        return;
+    }
 
     selectedRouteName = lineSelect.value;
     selectedRoute = ROUTES[selectedRouteName];
 
-    // compute next scheduled departure aligned to freq
-    const next = getNextDeparture(new Date(), selectedRoute.freq);
+    if (!selectedRoute) {
+        alert('Route not found');
+        return;
+    }
 
-    actualDepartureTime = null;
-    currentStopIndex = 0;
-    tableTitle.textContent = selectedRouteName;
+    // Compute next scheduled departure based on frequency
+    const nextDeparture = getNextDeparture(new Date(), selectedRoute.freq);
+    nextDepartureEl.textContent = formatTime(nextDeparture);
 
-    // render timetable with correct arrival times
-    renderDynamicTimetable(selectedRoute, next);
+    // Render timetable
+    renderDynamicTimetable(selectedRoute, nextDeparture);
 
+    // Show timetable card and controls
     timetableCard.style.display = 'block';
     stationControls.style.display = 'block';
+
+    // Reset departure variables
+    actualDepartureTime = null;
+    currentStopIndex = 0;
     timerDisplay.textContent = '--:--';
     currentStationEl.textContent = '';
     statusDiv.textContent = '';
 });
+
 
 
 // Reverse
@@ -482,6 +493,7 @@ populateRoutesSelect(); populateAdminLists(); renderActiveDrivers();
 </script>
 </body>
 </html>
+
 
 
 
