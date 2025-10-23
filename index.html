@@ -665,6 +665,19 @@ departBtn.addEventListener('click', ()=>{
 
   // start per-stop timer
   startStopTimerForIndex(currentStopIndex);
+// --- Notify Discord bot (play audio) ---
+try {
+  fetch("https://erlc-bot-meqt.onrender.com/next-station", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      route: selectedRouteName,     // sends the route name correctly!
+      station: selectedRoute.stops[currentStopIndex] // current station name
+    })
+  });
+} catch (err) {
+  console.error("Discord bot request failed:", err);
+}
 
   statusDiv.textContent = `Departed: ${selectedRoute.stops[currentStopIndex] || 'Unknown'}`;
 });
@@ -911,6 +924,7 @@ initUI();
 </script>
 </body>
 </html>
+
 
 
 
