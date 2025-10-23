@@ -187,6 +187,9 @@ const STORAGE_STRIKES = 'erlc_strikes_v3';
 const STORAGE_ROUTE_OWNERS = 'erlc_routeOwners_v3'; // which route is locked by which driver
 const DISCORD_BOT_ENDPOINT = "https://erlc-bot-meqt.onrender.com";
 
+  // Discord bot endpoint
+window.DISCORD_BOT_ENDPOINT = "https://erlc-bot-meqt.onrender.com";
+
   
 const defaultUsers = {
   "pwatg123admin": {pw:"utrechtov20092025", admin:true},
@@ -711,17 +714,22 @@ nextBtn.addEventListener('click', ()=>{
 
   // ⏳ Delay Discord bot call by 10 seconds
   setTimeout(()=>{
-    if(window.DISCORD_BOT_ENDPOINT){
-      fetch(`${DISCORD_BOT_ENDPOINT}/next-station`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          routeName: selectedRouteName,
-          stationName: selectedRoute?.stops[currentStopIndex]
-        })
-      }).catch(err => console.error("Bot fetch failed:", err));
-    }
-  }, 10000); // 10 second delay
+  const routeNameToSend = selectedRouteName || "Unknown route";
+  const stationNameToSend = selectedRoute?.stops?.[currentStopIndex] || "Unknown station";
+
+  console.log("Sending to bot:", routeNameToSend, "->", stationNameToSend); // ✅ debug in browser console
+
+  if (window.DISCORD_BOT_ENDPOINT) {
+    fetch(`${window.DISCORD_BOT_ENDPOINT}/next-station`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        routeName: routeNameToSend,
+        stationName: stationNameToSend
+      })
+    }).catch(err => console.error("Bot fetch failed:", err));
+  }
+}, 10000);  // 10 second delay
 });
 
 
@@ -931,6 +939,7 @@ initUI();
 </script>
 </body>
 </html>
+
 
 
 
