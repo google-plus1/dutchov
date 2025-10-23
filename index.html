@@ -179,14 +179,15 @@ th{color:#fff;background:linear-gradient(90deg,var(--accent),#ff907a);border-rad
 /* -------------------------
    Storage keys / defaults
    ------------------------- */
-const DISCORD_BOT_ENDPOINT = "https://erlc-bot-meqt.onrender.com"; // <-- change to your bot server endpoint
 const STORAGE_USERS = 'erlc_users_v3';
 const STORAGE_ROUTES = 'erlc_routes_v3';
 const STORAGE_LOGS = 'erlc_logs_v3';
 const STORAGE_ACTIVE = 'erlc_activeDrivers_v3';
 const STORAGE_STRIKES = 'erlc_strikes_v3';
 const STORAGE_ROUTE_OWNERS = 'erlc_routeOwners_v3'; // which route is locked by which driver
+const DISCORD_BOT_ENDPOINT = "https://erlc-bot-meqt.onrender.com";
 
+  
 const defaultUsers = {
   "pwatg123admin": {pw:"utrechtov20092025", admin:true},
   "Roidkyadmin": {pw:"Mohamed4obai", admin:true},
@@ -710,14 +711,15 @@ nextBtn.addEventListener('click', ()=>{
 
   // --- Notify Discord bot (play audio) ---
   try {
-    fetch("https://erlc-bot-meqt.onrender.com/next-station", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        route: selectedRouteName,
-        station: selectedRoute.stops[currentStopIndex]
-      })
-    });
+    fetch(`${DISCORD_BOT_ENDPOINT}/next-station`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    routeName: selectedRouteName,
+    stationName: selectedRoute?.stops[currentStopIndex]
+  })
+});
+
   } catch (err) {
     console.error("Discord bot request failed:", err);
   }
@@ -929,6 +931,7 @@ initUI();
 </script>
 </body>
 </html>
+
 
 
 
