@@ -682,14 +682,17 @@ try {
   statusDiv.textContent = `Departed: ${selectedRoute.stops[currentStopIndex] || 'Unknown'}`;
 });
 
-nextBtn.addEventListener('click', ()=>{ 
+nextBtn.addEventListener('click', ()=>{
   if(!selectedRoute || !actualDepartureTime) return;
+
   const arrivalForCurrent = new Date(actualDepartureTime.getTime() + currentStopIndex*60000);
   const secRemaining = Math.ceil((arrivalForCurrent - new Date())/1000);
+
   if(secRemaining > 15){
     statusDiv.textContent = `Next Station only in last 15s before arrival (${secRemaining}s left)`;
     return;
   }
+
   const diff = Math.floor((new Date() - arrivalForCurrent)/1000); // positive => late
   if(diff <= 0){
     statusDiv.innerHTML = `<span class="ok">On Time ✅</span> &nbsp;(${formatDiffSec(Math.abs(diff))})`;
@@ -697,27 +700,29 @@ nextBtn.addEventListener('click', ()=>{
     statusDiv.innerHTML = `<span class="danger">Late ❌</span> &nbsp;(-${formatDiffSec(diff)})`;
   }
 
-  // send audio trigger to bot (if available)
-  const station = selectedRoute.stops[currentStopIndex];
-  if(DISCORD_BOT_ENDPOINT){
-    fetch(`${DISCORD_BOT_ENDPOINT}/next-station`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    routeName: selectedRouteName,
-    station: currentStationEl.textContent.replace('Current station: ', '')
-  })
-});
-
-  }
-
   currentStopIndex++;
   if(currentStopIndex >= selectedRoute.stops.length){
     endRoute();
     return;
   }
+
   startStopTimerForIndex(currentStopIndex);
+
+  // --- Notify Discord bot (play audio) ---
+  try {
+    fetch("https://erlc-bot-meqt.onrender.com/next-station", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        route: selectedRouteName,
+        station: selectedRoute.stops[currentStopIndex]
+      })
+    });
+  } catch (err) {
+    console.error("Discord bot request failed:", err);
+  }
 });
+
 
 endBtn.addEventListener('click', endRoute);
 
@@ -924,6 +929,7 @@ initUI();
 </script>
 </body>
 </html>
+
 
 
 
