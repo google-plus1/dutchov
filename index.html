@@ -688,7 +688,6 @@ nextBtn.addEventListener('click', ()=>{
 
   const arrivalForCurrent = new Date(actualDepartureTime.getTime() + currentStopIndex*60000);
   const secRemaining = Math.ceil((arrivalForCurrent - new Date())/1000);
-
   if(secRemaining > 15){
     statusDiv.textContent = `Next Station only in last 15s before arrival (${secRemaining}s left)`;
     return;
@@ -707,23 +706,24 @@ nextBtn.addEventListener('click', ()=>{
     return;
   }
 
+  // Start next station timer immediately
   startStopTimerForIndex(currentStopIndex);
 
-  // --- Notify Discord bot (play audio) ---
-  try {
-    fetch(`${DISCORD_BOT_ENDPOINT}/next-station`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    routeName: selectedRouteName,
-    stationName: selectedRoute?.stops[currentStopIndex]
-  })
+  // ⏳ Delay Discord bot call by 10 seconds
+  setTimeout(()=>{
+    if(window.DISCORD_BOT_ENDPOINT){
+      fetch(`${DISCORD_BOT_ENDPOINT}/next-station`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          routeName: selectedRouteName,
+          stationName: selectedRoute?.stops[currentStopIndex]
+        })
+      }).catch(err => console.error("Bot fetch failed:", err));
+    }
+  }, 10000); // 10 second delay
 });
 
-  } catch (err) {
-    console.error("Discord bot request failed:", err);
-  }
-});
 
 
 endBtn.addEventListener('click', endRoute);
@@ -931,6 +931,7 @@ initUI();
 </script>
 </body>
 </html>
+
 
 
 
