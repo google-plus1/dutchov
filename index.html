@@ -589,17 +589,17 @@ logoutBtn.addEventListener('click', ()=>{
 /* -------------------------
    Reserve/Free route (one driver per route)
    ------------------------- */
-function canLoadRoute(routeName){
-  if(!ROUTE_OWNERS[routeName]) return true;
-  return ROUTE_OWNERS[routeName] === CURRENT_USER;
+// 🟢 Route ownership system disabled — all drivers can use any route freely
+function canLoadRoute(routeName) {
+  return true; // Always allow
 }
-function reserveRoute(routeName, user){
-  ROUTE_OWNERS[routeName] = user;
-  saveRouteOwnersAndRefresh();
+function reserveRoute(routeName, user) {
+  // Do nothing (no ownership tracking)
 }
-function freeRoute(routeName){
-  if(ROUTE_OWNERS[routeName]){ delete ROUTE_OWNERS[routeName]; saveRouteOwnersAndRefresh(); }
+function freeRoute(routeName) {
+  // Do nothing (no freeing needed)
 }
+
 
 /* -------------------------
    Load / confirm route
@@ -649,10 +649,7 @@ reverseBtn.addEventListener('click', ()=>{
 departBtn.addEventListener('click', ()=>{
   if(!selectedRoute){ alert('Load a route first'); return; }
   // If route is owned by someone else, block
-  if(ROUTE_OWNERS[selectedRouteName] && ROUTE_OWNERS[selectedRouteName] !== CURRENT_USER && !CURRENT_USER_IS_ADMIN){
-    alert(`Cannot depart. Route owned by ${ROUTE_OWNERS[selectedRouteName]}.`);
-    return;
-  }
+ 
   // Reserve if not reserved
   reserveRoute(selectedRouteName, CURRENT_USER);
 
@@ -939,6 +936,7 @@ initUI();
 </script>
 </body>
 </html>
+
 
 
 
