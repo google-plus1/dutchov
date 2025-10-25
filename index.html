@@ -64,6 +64,7 @@ th{color:#fff;background:linear-gradient(90deg,var(--accent),#ff907a);border-rad
         <button id="logoutBtn" style="display:none;background:#6c757d">Logout</button>
       </div>
       <div id="loginMsg" class="mutedSmall" style="margin-top:8px;color:#ffb4b4"></div>
+      <button id="openDeparturesBtn" style="margin-top:8px;background:#1cc88a;">Vertrektijden</button>
     </div>
 
     <div id="driverControls" style="display:none;margin-top:12px">
@@ -681,6 +682,7 @@ try {
 }
 
   statusDiv.textContent = `Departed: ${selectedRoute.stops[currentStopIndex] || 'Unknown'}`;
+  registerDeparture(selectedRouteName, selectedRoute.stops[0], actualDepartureTime);
 });
 
 nextBtn.addEventListener('click', ()=>{
@@ -933,9 +935,72 @@ function initUI(){
 // initial call
 initUI();
 
+  // ======================
+// Vertrektijden UI
+// ======================
+
+// Maak een paneel voor vertrektijden
+const departuresPanel = document.createElement("div");
+departuresPanel.id = "departuresPanel";
+departuresPanel.style.cssText = `
+  position:fixed; inset:0; background:rgba(0,0,0,.8);
+  display:none; justify-content:center; align-items:center; z-index:9999;
+`;
+departuresPanel.innerHTML = `
+  <div style="background:#0b1220; padding:20px; border-radius:12px; width:420px; max-height:80vh; overflow:auto;">
+    <h2 style="margin-top:0;">Vertrektijden</h2>
+    <table style="width:100%; border-collapse:collapse;">
+      <thead><tr><th>Lijn</th><th>Locatie</th><th>Vertrektijd</th><th>In</th></tr></thead>
+      <tbody id="departuresBody"></tbody>
+    </table>
+    <button id="closeDeparturesBtn" style="margin-top:12px;width:100%;background:#6c757d;">Sluiten</button>
+  </div>
+`;
+document.body.appendChild(departuresPanel);
+
+// Open/close logica
+document.getElementById("openDeparturesBtn").addEventListener("click", ()=>{
+  departuresPanel.style.display = "flex";
+  renderDepartures();
+});
+document.getElementById("closeDeparturesBtn").addEventListener("click", ()=>{
+  departuresPanel.style.display = "none";
+});
+
+// Data laden en tonen
+function renderDepartures(){
+  const tbody = document.getElementById("departuresBody");
+  tbody.innerHTML = "";
+
+  const stored = JSON.parse(localStorage.getItem("erlc_activeDepartures") || "[]");
+  const now = new Date();
+
+  if(stored.length === 0){
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#aaa;">Geen actieve lijnen</td></tr>`;
+    return;
+  }
+
+  stored.forEach(dep=>{
+    const tr = document.createElement("tr");
+    const mins = Math.max(0, Math.floor((new Date(dep.time) - now)/60000));
+    tr.innerHTML = `<td>${dep.line}</td><td>${dep.stop}</td><td>${new Date(dep.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td><td>${mins} min</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// Elke chauffeur die vertrekt → opslaan in localStorage (gedeeld)
+function registerDeparture(lineName, stopName, departTime){
+  const departures = JSON.parse(localStorage.getItem("erlc_activeDepartures") || "[]");
+  const filtered = departures.filter(d => d.line !== lineName);
+  filtered.push({ line: lineName, stop: stopName, time: departTime });
+  localStorage.setItem("erlc_activeDepartures", JSON.stringify(filtered));
+}
+
+
 </script>
 </body>
 </html>
+
 
 
 
