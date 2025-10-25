@@ -968,38 +968,54 @@ document.getElementById("closeDeparturesBtn").addEventListener("click", ()=>{
 });
 
 // Data laden en tonen
-function renderDepartures(){
+async function renderDepartures(){
   const tbody = document.getElementById("departuresBody");
-  tbody.innerHTML = "";
+  tbody.innerHTML = "<tr><td colspan='4' style='text-align:center;color:#aaa;'>Laden...</td></tr>";
 
-  const stored = JSON.parse(localStorage.getItem("erlc_activeDepartures") || "[]");
-  const now = new Date();
+  try {
+    const res = await fetch("https://erlc-bot-meqt.onrender.com/departures");
+    const stored = await res.json();
+    tbody.innerHTML = "";
+    const now = new Date();
 
-  if(stored.length === 0){
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#aaa;">Geen actieve lijnen</td></tr>`;
-    return;
+    if(!stored.length){
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#aaa;">Geen actieve lijnen</td></tr>`;
+      return;
+    }
+
+    stored.forEach(dep=>{
+      const tr = document.createElement("tr");
+      const mins = Math.max(0, Math.floor((new Date(dep.time) - now)/60000));
+      tr.innerHTML = `<td>${dep.line}</td><td>${dep.stop}</td><td>${new Date(dep.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td><td>${mins} min</td>`;
+      tbody.appendChild(tr);
+    });
+
+  } catch(err) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#f66;">Fout bij laden</td></tr>`;
+    console.error("Fout bij ophalen vertrektijden:", err);
   }
-
-  stored.forEach(dep=>{
-    const tr = document.createElement("tr");
-    const mins = Math.max(0, Math.floor((new Date(dep.time) - now)/60000));
-    tr.innerHTML = `<td>${dep.line}</td><td>${dep.stop}</td><td>${new Date(dep.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td><td>${mins} min</td>`;
-    tbody.appendChild(tr);
-  });
 }
+
 
 // Elke chauffeur die vertrekt → opslaan in localStorage (gedeeld)
-function registerDeparture(lineName, stopName, departTime){
-  const departures = JSON.parse(localStorage.getItem("erlc_activeDepartures") || "[]");
-  const filtered = departures.filter(d => d.line !== lineName);
-  filtered.push({ line: lineName, stop: stopName, time: departTime });
-  localStorage.setItem("erlc_activeDepartures", JSON.stringify(filtered));
+async function registerDeparture(lineName, stopName, departTime){
+  try {
+    await fetch("https://erlc-bot-meqt.onrender.com/departures", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ line: lineName, stop: stopName, time: departTime })
+    });
+  } catch(err) {
+    console.error("Fout bij verzenden vertrektijd:", err);
+  }
 }
+
 
 
 </script>
 </body>
 </html>
+
 
 
 
