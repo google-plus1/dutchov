@@ -523,44 +523,41 @@ function getNextDeparture(nowDate, freq){
 function renderDynamicTimetable(route, departTime){
   tableBody.innerHTML = '';
   if(!route) return;
-  // if departTime not provided: compute next scheduled departure based on frequency
-  let baseDepart;
-  if(departTime){
-    baseDepart = new Date(departTime);
-  } else {
-    baseDepart = getNextDeparture(new Date(), route.freq);
-  }
-  nextDepartureTimeForRoute = baseDepart;
 
-  // display next departure in UI (rounded to freq)
+  // vertrek bepalen
+  let baseDepart = departTime ? new Date(departTime) : getNextDeparture(new Date(), route.freq);
+  nextDepartureTimeForRoute = baseDepart;
   nextDepartureEl.textContent = formatTime(baseDepart);
 
-  // build rows
+  // maak elke halte
   route.stops.forEach((stop, i) => {
-  const tr = document.createElement('tr');
-  const tdStop = document.createElement('td');
-  const stopName = typeof stop === 'object' ? stop.name : stop;
-  tdStop.textContent = stopName;
+    const tr = document.createElement('tr');
 
-if (typeof stop === 'object' && stop.postal) {
-  const info = document.createElement('div');
-  info.className = "mutedSmall";
-  info.textContent = `Postcode: ${stop.postal}`;
-  tdStop.appendChild(info);
-}
+    // --- kolom halte ---
+    const tdStop = document.createElement('td');
+    const stopName = (typeof stop === 'object' && stop.name) ? stop.name : stop;
+    tdStop.textContent = stopName || 'Onbekend';
 
-    const arrival = new Date(baseDepart.getTime() + i*60000); // 1 minute per stop
+    if (typeof stop === 'object' && stop.postal) {
+      const info = document.createElement('div');
+      info.className = "mutedSmall";
+      info.textContent = `Postcode: ${stop.postal}`;
+      tdStop.appendChild(info);
+    }
+
+    // --- kolom tijd ---
+    const tdTime = document.createElement('td');
+    const arrival = new Date(baseDepart.getTime() + i * 60000); // 1 minuut per halte
     tdTime.textContent = formatTime(arrival);
 
-    // if departTime was provided (e.g. driver departed early/late) show delta indicator
-    if(departTime){
-      // compute scheduled arrival if started at scheduled base (getNextDeparture)
+    // vertraging/te vroeg badge
+    if (departTime) {
       const scheduledBase = getNextDeparture(new Date(), route.freq);
-      const scheduledArrival = new Date(scheduledBase.getTime() + i*60000);
-      const deltaSec = Math.round((arrival - scheduledArrival)/1000);
-      if(deltaSec !== 0){
-        const deltaMin = Math.floor(Math.abs(deltaSec)/60);
-        const deltaRem = Math.abs(deltaSec)%60;
+      const scheduledArrival = new Date(scheduledBase.getTime() + i * 60000);
+      const deltaSec = Math.round((arrival - scheduledArrival) / 1000);
+      if (deltaSec !== 0) {
+        const deltaMin = Math.floor(Math.abs(deltaSec) / 60);
+        const deltaRem = Math.abs(deltaSec) % 60;
         const sign = deltaSec > 0 ? '+' : '-';
         const span = document.createElement('span');
         span.style.marginLeft = '8px';
@@ -568,15 +565,17 @@ if (typeof stop === 'object' && stop.postal) {
         span.style.padding = '2px 6px';
         span.style.borderRadius = '6px';
         span.textContent = `${sign}${deltaMin}:${pad(deltaRem)}`;
-        if(deltaSec > 0) span.style.background = 'rgba(228,63,90,0.12)';
-        else span.style.background = 'rgba(28,200,138,0.06)';
+        span.style.background = deltaSec > 0 ? 'rgba(228,63,90,0.12)' : 'rgba(28,200,138,0.06)';
         tdTime.appendChild(span);
       }
     }
 
-    tr.appendChild(tdStop); tr.appendChild(tdTime);
+    tr.appendChild(tdStop);
+    tr.appendChild(tdTime);
     tableBody.appendChild(tr);
   });
+}
+
 }
 
 /* -------------------------
@@ -1088,6 +1087,7 @@ async function registerDeparture(lineName, stopName, departTime){
 </script>
 </body>
 </html>
+
 
 
 
