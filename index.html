@@ -177,21 +177,24 @@ th{color:#fff;background:linear-gradient(90deg,var(--accent),#ff907a);border-rad
 </div>
 
 <script>
-/* -------------------------
-   Storage keys / defaults
-   ------------------------- */
+/* ============================================================
+   CONFIG
+   ============================================================ */
+const DISCORD_BOT_ENDPOINT = "https://erlc-bot-meqt.onrender.com"; // your bot server
+window.DISCORD_BOT_ENDPOINT = DISCORD_BOT_ENDPOINT;
+
+/* ============================================================
+   STORAGE KEYS
+   ============================================================ */
 const STORAGE_USERS = 'erlc_users_v3';
 const STORAGE_ROUTES = 'erlc_routes_v3';
 const STORAGE_LOGS = 'erlc_logs_v3';
 const STORAGE_ACTIVE = 'erlc_activeDrivers_v3';
 const STORAGE_STRIKES = 'erlc_strikes_v3';
-const STORAGE_ROUTE_OWNERS = 'erlc_routeOwners_v3'; // which route is locked by which driver
-const DISCORD_BOT_ENDPOINT = "https://erlc-bot-meqt.onrender.com";
 
-  // Discord bot endpoint
-window.DISCORD_BOT_ENDPOINT = "https://erlc-bot-meqt.onrender.com";
-
-  
+/* ============================================================
+   DEFAULT DATA
+   ============================================================ */
 const defaultUsers = {
   "pwatg123admin": {pw:"utrechtov20092025", admin:true},
   "Roidkyadmin": {pw:"Mohamed4obai", admin:true},
@@ -207,84 +210,71 @@ const defaultRoutes = {
   "Line 6": {
     freq: 10,
     stops: [
-      { name: "Spawn", postal: "202", img: "Spawn.jpg" },
-      { name: "Fire Department", postal: "210", img: "Fire Department.jpg" },
-      { name: "Central Park", postal: "216", img: "Central Park.jpg" },
-      { name: "P+R Transferium", postal: "410", img: "P+R Transferium.jpg" },
-      { name: "Farms", postal: "601", img: "Farms.jpg" },
-      { name: "Highrock", postal: "1201", img: "Highrock.jpg" }
+      { name: "Spawn",            postal: "202",  img: "Spawn.jpg" },
+      { name: "Fire Department",  postal: "210",  img: "Fire Department.jpg" },
+      { name: "Central Park",     postal: "216",  img: "Central Park.jpg" },
+      { name: "P+R Transferium",  postal: "410",  img: "P+R Transferium.jpg" },
+      { name: "Farms",            postal: "601",  img: "Farms.jpg" },
+      { name: "Highrock",         postal: "1201", img: "Highrock.jpg" }
     ]
   },
   "Line 9 Shuttlebus": {
     freq: 10,
     stops: [
-      { name: "Spawn", postal: "202", img: "Spawn.jpg" },
-      { name: "Fire Department", postal: "210", img: "Fire Department.jpg" },
-      { name: "Central Park", postal: "216", img: "Central Park.jpg" }
+      { name: "Spawn",            postal: "202", img: "Spawn.jpg" },
+      { name: "Fire Department",  postal: "210", img: "Fire Department.jpg" },
+      { name: "Central Park",     postal: "216", img: "Central Park.jpg" }
     ]
   },
   "Line 15 Shuttlebus": {
     freq: 10,
     stops: [
-      { name: "Spawn", postal: "202", img: "Spawn.jpg" },
-      { name: "Repair shop", postal: "2011", img: "Repair shop.jpg" },
-      { name: "P+R Transferium", postal: "410", img: "P+R Transferium.jpg" }
+      { name: "Spawn",            postal: "202",  img: "Spawn.jpg" },
+      { name: "Repair shop",      postal: "2011", img: "Repair shop.jpg" },
+      { name: "P+R Transferium",  postal: "410",  img: "P+R Transferium.jpg" }
     ]
   },
   "Lijn 12": {
     freq: 10,
     stops: [
-      { name: "Spawn", postal: "202", img: "Spawn.jpg" },
-      { name: "Chinatown", postal: "2002", img: "Chinatown.jpg" },
-      { name: "Fire Department", postal: "210", img: "Fire Department.jpg" },
-      { name: "Central Park", postal: "216", img: "Central Park.jpg" },
-      { name: "Hospital", postal: "404", img: "Hospital.jpg" },
-      { name: "Farms", postal: "601", img: "Farms.jpg" },
-      { name: "Highrock", postal: "1201", img: "Highrock.jpg" },
-      { name: "Springfield", postal: "1107", img: "Springfield.jpg" }
+      { name: "Spawn",            postal: "202",  img: "Spawn.jpg" },
+      { name: "Chinatown",        postal: "2002", img: "Chinatown.jpg" },
+      { name: "Fire Department",  postal: "210",  img: "Fire Department.jpg" },
+      { name: "Central Park",     postal: "216",  img: "Central Park.jpg" },
+      { name: "Hospital",         postal: "404",  img: "Hospital.jpg" },
+      { name: "Farms",            postal: "601",  img: "Farms.jpg" },
+      { name: "Highrock",         postal: "1201", img: "Highrock.jpg" },
+      { name: "Springfield",      postal: "1107", img: "Springfield.jpg" }
     ]
   },
   "FastLine": {
     freq: 8,
     stops: [
       { name: "Springfield", postal: "1107", img: "Springfield.jpg" },
-      { name: "River City", postal: "999", img: "River City.jpg" } // tijdelijke code
+      { name: "River City",  postal: "999",  img: "River City.jpg" } // temp code
     ]
   }
 };
 
-
-
-/* -------------------------
-   Storage helpers
-   ------------------------- */
+/* ============================================================
+   STORAGE HELPERS
+   ============================================================ */
 function save(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
 function load(key, fallback){ const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
 
 function saveUsers(u){ save(STORAGE_USERS, u); }
-async function loadUsers(){
-  try {
-    const res = await fetch('https://jouwprojectnaam.netlify.app/users.json');
-    if (!res.ok) throw new Error('Kan users.json niet laden');
-    const data = await res.json();
-    console.log('✅ Gebruikers geladen van server:', data);
-    return data;
-  } catch (err) {
-    console.warn('⚠️ Laden van users.json mislukt, gebruik lokale default.', err);
-    return defaultUsers;
-  }
-}
-
+function loadUsers(){ return load(STORAGE_USERS, defaultUsers); }
 
 function saveRoutes(r){ save(STORAGE_ROUTES, r); }
 function loadRoutes(){
   let r = load(STORAGE_ROUTES, null);
   if(!r){
     r = JSON.parse(JSON.stringify(defaultRoutes));
-    for(const name in defaultRoutes){
+    // auto-build reverse routes with plain names (reverse objects)
+    Object.keys(defaultRoutes).forEach(name=>{
       const rev = name + " 2";
-      if(!r[rev]) r[rev] = {freq: defaultRoutes[name].freq, stops: [...defaultRoutes[name].stops].reverse()};
-    }
+      if(!r[rev]) r[rev] = {freq: defaultRoutes[name].freq, stops: [...defaultRoutes[name].stops].slice().reverse()};
+    });
     saveRoutes(r);
   }
   return r;
@@ -299,42 +289,55 @@ function loadActive(){ return load(STORAGE_ACTIVE, []); }
 function saveStrikes(s){ save(STORAGE_STRIKES, s); }
 function loadStrikes(){ return load(STORAGE_STRIKES, {}); }
 
-function saveRouteOwners(o){ save(STORAGE_ROUTE_OWNERS, o); }
-function loadRouteOwners(){ return load(STORAGE_ROUTE_OWNERS, {}); }
-
-/* -------------------------
-   App data (in-memory)
-   ------------------------- */
-let USERS = {};
-loadUsers().then(data => {
-  USERS = data;
-  console.log("✅ Gebruikers geladen:", USERS);
-  initUI(); // start interface pas als gebruikers geladen zijn
-});
-
+/* ============================================================
+   IN-MEMORY APP STATE
+   ============================================================ */
+let USERS = loadUsers();
 let ROUTES = loadRoutes();
 let LOGS = loadLogs();
 let ACTIVE_DRIVERS = loadActive();
 let STRIKES = loadStrikes();
-let ROUTE_OWNERS = loadRouteOwners();
 
-/* -------------------------
-   Simple utilities
-   ------------------------- */
+let CURRENT_USER = null;
+let CURRENT_USER_IS_ADMIN = false;
+
+let selectedRouteName = null;
+let selectedRoute = null;
+
+let actualDepartureTime = null;
+let currentStopIndex = 0;
+let timerInterval = null;
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
 function now(){ return new Date(); }
+function pad(n){ return String(n).padStart(2,'0'); }
 function formatTime(d){ return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
 function formatTimeWithSeconds(d){ return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'}); }
-function pad(n){ return String(n).padStart(2,'0'); }
 function formatDiffSec(s){
   s = Math.floor(Math.abs(s));
   const mm = Math.floor(s/60);
   const ss = s%60;
   return `${pad(mm)}:${pad(ss)}`;
 }
+function getStopName(stop){ return typeof stop === 'object' ? stop.name : stop; }
+function getStopPostal(stop){ return typeof stop === 'object' ? (stop.postal || '') : ''; }
 
-/* -------------------------
-   DOM elements
-   ------------------------- */
+function getNextDeparture(dateObj, freq){
+  const next = new Date(dateObj);
+  const mins = next.getMinutes();
+  const rem = mins % freq;
+  const add = rem === 0 ? 0 : (freq - rem);
+  next.setMinutes(mins + add);
+  next.setSeconds(0,0);
+  if(next < dateObj) next.setMinutes(next.getMinutes()+freq);
+  return next;
+}
+
+/* ============================================================
+   DOM
+   ============================================================ */
 const usernameEl = document.getElementById('username');
 const passwordEl = document.getElementById('password');
 const loginBtn = document.getElementById('loginBtn');
@@ -384,106 +387,85 @@ const newRouteStops = document.getElementById('newRouteStops');
 const addRouteBtn = document.getElementById('addRouteBtn');
 const refreshRoutesBtn = document.getElementById('refreshRoutesBtn');
 
-/* -------------------------
-   App state vars
-   ------------------------- */
-let CURRENT_USER = null;
-let CURRENT_USER_IS_ADMIN = false;
-let selectedRouteName = null;
-let selectedRoute = null;
-let useReverse = false;
-let actualDepartureTime = null;
-let currentStopIndex = 0;
-let timerInterval = null;
-let nextDepartureTimeForRoute = null;
-
-/* -------------------------
-   Rendering helpers
-   ------------------------- */
+/* ============================================================
+   RENDERING
+   ============================================================ */
 function renderActiveDrivers(){
   driversList.innerHTML = '';
-  ACTIVE_DRIVERS.forEach(d=>{
+  ACTIVE_DRIVERS.forEach(name=>{
     const li = document.createElement('li');
-    li.textContent = d;
+    li.textContent = name;
     driversList.appendChild(li);
   });
   activeDriversDiv.style.display = ACTIVE_DRIVERS.length ? 'block' : 'none';
 }
-
 function populateRoutesSelect(){
   lineSelect.innerHTML = '';
   Object.keys(ROUTES).sort().forEach(n=>{
-    const opt = document.createElement('option');
-    opt.value = n; opt.textContent = n;
-    lineSelect.appendChild(opt);
+    const o = document.createElement('option');
+    o.value = n; o.textContent = n;
+    lineSelect.appendChild(o);
   });
   if(lineSelect.options.length) lineSelect.value = lineSelect.options[0].value;
 }
-
 function renderRouteRow(name){
-  // returns element for routesList with Edit/Delete buttons
   const row = document.createElement('div');
-  row.style.display='flex'; row.style.justifyContent='space-between';
-  row.style.alignItems='center'; row.style.marginBottom='8px';
+  row.style.display='flex'; row.style.justifyContent='space-between'; row.style.alignItems='center';
+  row.style.marginBottom='8px';
 
   const left = document.createElement('div');
   left.innerHTML = `<strong>${name}</strong> <div class="mutedSmall">${ROUTES[name].freq} min — ${ROUTES[name].stops.length} stops</div>`;
 
-  const right = document.createElement('div');
-  right.style.display = 'flex'; right.style.gap = '6px';
+  const right = document.createElement('div'); right.style.display='flex'; right.style.gap='6px';
 
   const editBtn = document.createElement('button');
-  editBtn.className = 'smallBtn'; editBtn.textContent = 'Edit';
-  editBtn.addEventListener('click', ()=> openEditRouteDialog(name));
+  editBtn.className='smallBtn'; editBtn.textContent='Edit';
+  editBtn.addEventListener('click', ()=>openEditRouteDialog(name));
 
   const delBtn = document.createElement('button');
-  delBtn.className = 'smallBtn'; delBtn.textContent = 'Delete';
+  delBtn.className='smallBtn'; delBtn.textContent='Delete';
   delBtn.addEventListener('click', ()=>{
     if(!confirm(`Delete route "${name}" and its reverse?`)) return;
     delete ROUTES[name];
-    const rev = name.endsWith(' 2')? name.replace(/ 2$/,'') : name + ' 2';
+    const rev = name.endsWith(' 2') ? name.replace(/ 2$/,'') : (name + ' 2');
     if(ROUTES[rev]) delete ROUTES[rev];
-    saveRoutesAndRefresh();
+    saveRoutes(ROUTES); populateRoutesSelect(); populateAdminLists();
   });
 
-  right.appendChild(editBtn);
-  right.appendChild(delBtn);
-
-  row.appendChild(left);
-  row.appendChild(right);
+  right.appendChild(editBtn); right.appendChild(delBtn);
+  row.appendChild(left); row.appendChild(right);
   return row;
 }
-
 function populateAdminLists(){
-  // routes list
   routesList.innerHTML = '';
   Object.keys(ROUTES).sort().forEach(name=>{
     routesList.appendChild(renderRouteRow(name));
   });
 
-  // strikes select
   strikeSelect.innerHTML = '';
   Object.keys(USERS).sort().forEach(u=>{
-    const opt = document.createElement('option'); opt.value = u; opt.textContent = u;
-    strikeSelect.appendChild(opt);
+    const o = document.createElement('option');
+    o.value = u; o.textContent = u;
+    strikeSelect.appendChild(o);
   });
 
-  // logs
   renderLogs();
 }
-
 function renderLogs(){
   logsList.innerHTML = '';
-  if(!LOGS.length){ logsList.textContent = 'No shift logs'; return; }
+  if(!LOGS.length){
+    logsList.textContent = 'No shift logs';
+    return;
+  }
   LOGS.forEach((l, idx)=>{
-    const wrap = document.createElement('div'); wrap.className = 'logItem';
+    const wrap = document.createElement('div'); wrap.className='logItem';
     const left = document.createElement('div');
     left.innerHTML = `<strong>${l.user}</strong> - ${l.route} <div class="mutedSmall">${new Date(l.time).toLocaleString()}</div>`;
     const right = document.createElement('div');
     const del = document.createElement('button'); del.className='smallBtn'; del.textContent='Delete';
     del.addEventListener('click', ()=>{
       if(!confirm('Delete this log?')) return;
-      LOGS.splice(idx,1); saveLogsAndRefresh();
+      LOGS.splice(idx,1); saveLogs(LOGS); renderLogs();
     });
     right.appendChild(del);
     wrap.appendChild(left); wrap.appendChild(right);
@@ -491,75 +473,44 @@ function renderLogs(){
   });
 }
 
-/* -------------------------
-   Save helpers
-   ------------------------- */
-function saveUsersAndRefresh(){ saveUsers(USERS); populateAdminLists(); }
-function saveRoutesAndRefresh(){ saveRoutes(ROUTES); populateRoutesSelect(); populateAdminLists(); }
-function saveLogsAndRefresh(){ saveLogs(LOGS); renderLogs(); }
-function saveActiveAndRefresh(){ saveActive(ACTIVE_DRIVERS); renderActiveDrivers(); }
-function saveStrikesAndRefresh(){ saveStrikes(STRIKES); populateAdminLists(); }
-function saveRouteOwnersAndRefresh(){ saveRouteOwners(ROUTE_OWNERS); }
-
-/* -------------------------
-   Next departure calculation
-   ------------------------- */
-function getNextDeparture(nowDate, freq){
-  // return Date object representing next departure aligned on minute intervals freq
-  const next = new Date(nowDate);
-  const mins = next.getMinutes();
-  const rem = mins % freq;
-  const add = rem === 0 ? 0 : freq - rem;
-  next.setMinutes(mins + add);
-  next.setSeconds(0,0);
-  // if next is before now (shouldn't happen) add freq
-  if(next < nowDate) next.setMinutes(next.getMinutes() + freq);
-  return next;
-}
-
-/* -------------------------
-   Timetable rendering
-   ------------------------- */
 function renderDynamicTimetable(route, departTime){
   tableBody.innerHTML = '';
   if(!route) return;
 
-  // vertrek bepalen
-  let baseDepart = departTime ? new Date(departTime) : getNextDeparture(new Date(), route.freq);
-  nextDepartureTimeForRoute = baseDepart;
+  const baseDepart = departTime ? new Date(departTime) : getNextDeparture(new Date(), route.freq);
   nextDepartureEl.textContent = formatTime(baseDepart);
 
-  // maak elke halte
-  route.stops.forEach((stop, i) => {
+  route.stops.forEach((stop, i)=>{
     const tr = document.createElement('tr');
 
-    // --- kolom halte ---
+    // STOP CELL
     const tdStop = document.createElement('td');
-    const stopName = (typeof stop === 'object' && stop.name) ? stop.name : stop;
-    tdStop.textContent = stopName || 'Onbekend';
-
-    if (typeof stop === 'object' && stop.postal) {
+    const stopName = getStopName(stop);
+    tdStop.textContent = stopName || 'Unknown';
+    const postal = getStopPostal(stop);
+    if(postal){
       const info = document.createElement('div');
-      info.className = "mutedSmall";
-      info.textContent = `Postcode: ${stop.postal}`;
+      info.className = 'mutedSmall';
+      info.textContent = `Postcode: ${postal}`;
       tdStop.appendChild(info);
     }
 
-    // --- kolom tijd ---
+    // TIME CELL
     const tdTime = document.createElement('td');
-    const arrival = new Date(baseDepart.getTime() + i * 60000); // 1 minuut per halte
+    const arrival = new Date(baseDepart.getTime() + i*60000);
     tdTime.textContent = formatTime(arrival);
 
-    // vertraging/te vroeg badge
-    if (departTime) {
+    // delta badge only when departTime present
+    if(departTime){
       const scheduledBase = getNextDeparture(new Date(), route.freq);
-      const scheduledArrival = new Date(scheduledBase.getTime() + i * 60000);
-      const deltaSec = Math.round((arrival - scheduledArrival) / 1000);
-      if (deltaSec !== 0) {
-        const deltaMin = Math.floor(Math.abs(deltaSec) / 60);
-        const deltaRem = Math.abs(deltaSec) % 60;
+      const scheduledArrival = new Date(scheduledBase.getTime() + i*60000);
+      const deltaSec = Math.round((arrival - scheduledArrival)/1000);
+      if(deltaSec !== 0){
+        const deltaMin = Math.floor(Math.abs(deltaSec)/60);
+        const deltaRem = Math.abs(deltaSec)%60;
         const sign = deltaSec > 0 ? '+' : '-';
         const span = document.createElement('span');
+        span.className = 'delta-badge';
         span.style.marginLeft = '8px';
         span.style.fontSize = '12px';
         span.style.padding = '2px 6px';
@@ -570,125 +521,62 @@ function renderDynamicTimetable(route, departTime){
       }
     }
 
-    tr.appendChild(tdStop);
-    tr.appendChild(tdTime);
+    tr.appendChild(tdStop); tr.appendChild(tdTime);
     tableBody.appendChild(tr);
   });
 }
 
-}
-
-/* -------------------------
-   Timer & UI updates
-   ------------------------- */
+/* ============================================================
+   CLOCK / COUNTDOWN
+   ============================================================ */
 setInterval(()=>{
   const n = new Date();
   currentTimeEl.textContent = formatTimeWithSeconds(n);
 
-  // update countdown to next scheduled departure if a route is selected and not departed
   if(selectedRoute && !actualDepartureTime){
     const next = getNextDeparture(new Date(), selectedRoute.freq);
     const diff = Math.ceil((next - new Date())/1000);
-    if(diff > 0){
-      const mm = Math.floor(diff/60);
-      const ss = diff % 60;
-      countdownEl.textContent = `${pad(mm)}:${pad(ss)}`;
-    } else {
-      countdownEl.textContent = '00:00';
-    }
+    countdownEl.textContent = diff > 0 ? `${pad(Math.floor(diff/60))}:${pad(diff%60)}` : '00:00';
   }
 }, 1000);
 
-/* -------------------------
-   Login / logout (eenvoudige versie)
-   ------------------------- */
-
-// gebruik direct de ingebouwde defaultUsers
-let USERS = JSON.parse(JSON.stringify(defaultUsers));
-initUI();
-
-loginBtn.addEventListener("click", () => {
+/* ============================================================
+   LOGIN / LOGOUT
+   ============================================================ */
+loginBtn.addEventListener('click', ()=>{
   const u = usernameEl.value.trim();
   const p = passwordEl.value;
-  loginMsg.textContent = "";
-
-  if (!u || !p) {
-    loginMsg.textContent = "Vul gebruikersnaam en wachtwoord in";
-    return;
-  }
+  loginMsg.textContent = '';
+  if(!u || !p){ loginMsg.textContent = 'Enter username & password'; return; }
 
   const rec = USERS[u];
-  if (!rec || rec.pw !== p) {
-    loginMsg.textContent = "Ongeldige gebruikersnaam of wachtwoord";
-    return;
-  }
+  if(!rec || rec.pw !== p){ loginMsg.textContent = 'Invalid username or password'; return; }
 
-  // ✅ Succesvol ingelogd
   CURRENT_USER = u;
   CURRENT_USER_IS_ADMIN = !!rec.admin;
 
-  document.getElementById("loginSection").style.display = "none";
-  driverControls.style.display = "block";
-  logoutBtn.style.display = "inline-block";
-  userBadge.style.display = "inline-block";
-  userBadge.textContent = `${CURRENT_USER}${CURRENT_USER_IS_ADMIN ? " (admin)" : ""}`;
+  document.getElementById('loginSection').style.display = 'none';
+  driverControls.style.display = 'block';
+  logoutBtn.style.display = 'inline-block';
+  userBadge.style.display = 'inline-block';
+  userBadge.textContent = `${CURRENT_USER}${CURRENT_USER_IS_ADMIN ? ' (admin)' : ''}`;
 
-  // voeg toe aan actieve chauffeurs
-  if (!ACTIVE_DRIVERS.includes(CURRENT_USER)) {
-    ACTIVE_DRIVERS.push(CURRENT_USER);
-    saveActiveAndRefresh();
+  if(!ACTIVE_DRIVERS.includes(CURRENT_USER)){
+    ACTIVE_DRIVERS.push(CURRENT_USER); saveActive(ACTIVE_DRIVERS); renderActiveDrivers();
   }
 
   populateRoutesSelect();
   populateAdminLists();
-  timetableCard.style.display = "none";
-  stationControls.style.display = "none";
-  adminPanel.style.display = CURRENT_USER_IS_ADMIN ? "block" : "none";
+  timetableCard.style.display = 'none';
+  stationControls.style.display = 'none';
+  adminPanel.style.display = CURRENT_USER_IS_ADMIN ? 'block' : 'none';
 });
-
-logoutBtn.addEventListener("click", () => {
-  if (CURRENT_USER) {
-    // haal uit actieve lijst
-    const idx = ACTIVE_DRIVERS.indexOf(CURRENT_USER);
-    if (idx !== -1) {
-      ACTIVE_DRIVERS.splice(idx, 1);
-      saveActiveAndRefresh();
-    }
-
-    // verwijder route-locks
-    for (const r in ROUTE_OWNERS) {
-      if (ROUTE_OWNERS[r] === CURRENT_USER) delete ROUTE_OWNERS[r];
-    }
-    saveRouteOwnersAndRefresh();
-  }
-
-  CURRENT_USER = null;
-  CURRENT_USER_IS_ADMIN = false;
-
-  document.getElementById("loginSection").style.display = "block";
-  driverControls.style.display = "none";
-  adminPanel.style.display = "none";
-  timetableCard.style.display = "none";
-  stationControls.style.display = "none";
-  logoutBtn.style.display = "none";
-  userBadge.style.display = "none";
-});
-
 
 logoutBtn.addEventListener('click', ()=>{
   if(CURRENT_USER){
-    // remove from active drivers
     const idx = ACTIVE_DRIVERS.indexOf(CURRENT_USER);
-    if(idx !== -1){ ACTIVE_DRIVERS.splice(idx,1); saveActiveAndRefresh(); }
-    // if user owned a route, free it
-    for(const r in ROUTE_OWNERS){
-      if(ROUTE_OWNERS[r] === CURRENT_USER){
-        delete ROUTE_OWNERS[r];
-      }
-    }
-    saveRouteOwnersAndRefresh();
+    if(idx !== -1){ ACTIVE_DRIVERS.splice(idx,1); saveActive(ACTIVE_DRIVERS); renderActiveDrivers(); }
   }
-
   CURRENT_USER = null; CURRENT_USER_IS_ADMIN = false;
   document.getElementById('loginSection').style.display = 'block';
   driverControls.style.display = 'none';
@@ -699,44 +587,26 @@ logoutBtn.addEventListener('click', ()=>{
   userBadge.style.display = 'none';
 });
 
-/* -------------------------
-   Reserve/Free route (one driver per route)
-   ------------------------- */
-// 🟢 Route ownership system disabled — all drivers can use any route freely
-function canLoadRoute(routeName) {
-  return true; // Always allow
-}
-function reserveRoute(routeName, user) {
-  // Do nothing (no ownership tracking)
-}
-function freeRoute(routeName) {
-  // Do nothing (no freeing needed)
-}
+/* ============================================================
+   ROUTE LOAD (route-lock removed)
+   ============================================================ */
+function canLoadRoute(){ return true; } // always allow
 
-
-/* -------------------------
-   Load / confirm route
-   ------------------------- */
 confirmBtn.addEventListener('click', ()=>{
   if(!CURRENT_USER){ loginMsg.textContent = 'Please login first'; return; }
   selectedRouteName = lineSelect.value;
-  useReverse = false;
-  // check owner
-  if(!canLoadRoute(selectedRouteName) && !CURRENT_USER_IS_ADMIN){
-    alert(`Route ${selectedRouteName} is currently used by ${ROUTE_OWNERS[selectedRouteName]}.`);
-    return;
-  }
-  // reserve for this user
-  reserveRoute(selectedRouteName, CURRENT_USER);
+  if(!canLoadRoute(selectedRouteName)) return; // always true
+
   selectedRoute = ROUTES[selectedRouteName];
   tableTitle.textContent = selectedRouteName;
-  // show next scheduled departure immediately (rounded to freq)
+
   const next = getNextDeparture(new Date(), selectedRoute.freq);
   nextDepartureEl.textContent = formatTime(next);
   renderDynamicTimetable(selectedRoute, next);
+
   timetableCard.style.display = 'block';
   stationControls.style.display = 'block';
-  // reset in-memory depart times
+
   actualDepartureTime = null;
   currentStopIndex = 0;
   timerDisplay.textContent = '--:--';
@@ -746,55 +616,39 @@ confirmBtn.addEventListener('click', ()=>{
 
 reverseBtn.addEventListener('click', ()=>{
   if(!lineSelect.value) return;
-  // toggle by using reverse route name if exists
   const name = lineSelect.value;
   const revName = name.endsWith(' 2')? name.replace(/ 2$/,'') : name + ' 2';
-  if(ROUTES[revName]){
-    lineSelect.value = revName;
-  } else {
-    // no reverse route, ignore
-  }
+  if(ROUTES[revName]) lineSelect.value = revName;
 });
 
-/* -------------------------
-   Depart / Next / End logic
-   ------------------------- */
+/* ============================================================
+   DEPART / NEXT / END
+   ============================================================ */
 departBtn.addEventListener('click', ()=>{
   if(!selectedRoute){ alert('Load a route first'); return; }
-  // If route is owned by someone else, block
- 
-  // Reserve if not reserved
-  reserveRoute(selectedRouteName, CURRENT_USER);
 
-  // user departed now
   actualDepartureTime = new Date();
   currentStopIndex = 0;
 
-  // log shift
-  const entry = { user: CURRENT_USER, route: selectedRouteName, time: new Date().toISOString(), departTime: actualDepartureTime.toISOString() };
-  LOGS.unshift(entry); saveLogsAndRefresh();
+  LOGS.unshift({ user: CURRENT_USER, route: selectedRouteName, time: new Date().toISOString(), departTime: actualDepartureTime.toISOString() });
+  saveLogs(LOGS); renderLogs();
 
-  // update timetable to reflect actual departure
   renderDynamicTimetable(selectedRoute, actualDepartureTime);
-
-  // start per-stop timer
   startStopTimerForIndex(currentStopIndex);
-// --- Notify Discord bot (play audio) ---
-try {
-  fetch("https://erlc-bot-meqt.onrender.com/next-station", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      route: selectedRouteName,     // sends the route name correctly!
-      station: selectedRoute.stops[currentStopIndex] // current station name
-    })
-  });
-} catch (err) {
-  console.error("Discord bot request failed:", err);
-}
+  statusDiv.textContent = `Departed: ${getStopName(selectedRoute.stops[currentStopIndex])}`;
 
-  statusDiv.textContent = `Departed: ${selectedRoute.stops[currentStopIndex] || 'Unknown'}`;
-  registerDeparture(selectedRouteName, selectedRoute.stops[0], actualDepartureTime);
+  // Notify Discord and register departure board
+  try{
+    fetch(`${DISCORD_BOT_ENDPOINT}/next-station`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        routeName: selectedRouteName,
+        stationName: getStopName(selectedRoute.stops[currentStopIndex])
+      })
+    });
+  }catch(e){ console.warn('Bot request failed:', e); }
+
+  registerDeparture(selectedRouteName, getStopName(selectedRoute.stops[0]), actualDepartureTime);
 });
 
 nextBtn.addEventListener('click', ()=>{
@@ -807,7 +661,7 @@ nextBtn.addEventListener('click', ()=>{
     return;
   }
 
-  const diff = Math.floor((new Date() - arrivalForCurrent)/1000); // positive => late
+  const diff = Math.floor((new Date() - arrivalForCurrent)/1000); // + => late
   if(diff <= 0){
     statusDiv.innerHTML = `<span class="ok">On Time ✅</span> &nbsp;(${formatDiffSec(Math.abs(diff))})`;
   } else {
@@ -820,45 +674,31 @@ nextBtn.addEventListener('click', ()=>{
     return;
   }
 
-  // Start next station timer immediately
   startStopTimerForIndex(currentStopIndex);
 
-  // ⏳ Delay Discord bot call by 10 seconds
+  // 10s delay before the bot announces the next station
   setTimeout(()=>{
-  const routeNameToSend = selectedRouteName || "Unknown route";
-  const stationNameToSend = selectedRoute?.stops?.[currentStopIndex] || "Unknown station";
-
-  console.log("Sending to bot:", routeNameToSend, "->", stationNameToSend); // ✅ debug in browser console
-
-  if (window.DISCORD_BOT_ENDPOINT) {
-    fetch(`${window.DISCORD_BOT_ENDPOINT}/next-station`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        routeName: routeNameToSend,
-        stationName: stationNameToSend
-      })
-    }).catch(err => console.error("Bot fetch failed:", err));
-  }
-}, 10000);  // 10 second delay
+    const routeNameToSend = selectedRouteName || 'Unknown route';
+    const stationNameToSend = getStopName(selectedRoute.stops[currentStopIndex]) || 'Unknown station';
+    fetch(`${DISCORD_BOT_ENDPOINT}/next-station`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ routeName: routeNameToSend, stationName: stationNameToSend })
+    }).catch(()=>{});
+  }, 10000);
 });
-
-
 
 endBtn.addEventListener('click', endRoute);
 
 function startStopTimerForIndex(idx){
   clearTimer();
   updateCurrentStation(idx);
-  updateTimerDisplay(); // immediate
+  updateTimerDisplay();
   timerInterval = setInterval(updateTimerDisplay, 1000);
 }
-
 function updateCurrentStation(idx){
-  const stationName = selectedRoute && selectedRoute.stops[idx] ? selectedRoute.stops[idx] : '';
+  const stationName = (selectedRoute && selectedRoute.stops[idx]) ? getStopName(selectedRoute.stops[idx]) : '';
   currentStationEl.textContent = stationName ? `Current station: ${stationName}` : '';
 }
-
 function updateTimerDisplay(){
   if(!selectedRoute || currentStopIndex >= selectedRoute.stops.length || !actualDepartureTime){
     timerDisplay.textContent = '--:--'; nextBtn.disabled = true; return;
@@ -871,187 +711,130 @@ function updateTimerDisplay(){
     nextBtn.disabled = diffSec > 15;
   } else {
     timerDisplay.style.background = 'var(--bad)';
-    // when late, display +minutes:seconds (count up)
-    timerDisplay.textContent = '+' + formatDiffSec(Math.abs(diffSec));
+    timerDisplay.textContent = '+' + formatDiffSec(Math.abs(diffSec)); // counts up when late
     nextBtn.disabled = false;
   }
 
-  // update arrival times in the table to show deltas (if late)
-  // Re-render small delta badges next to times if actualDepartureTime exists
-  // We'll update only when actualDepartureTime present
-  if(actualDepartureTime){
-    // Recompute and apply delta badges in existing table rows
-    const rows = tableBody.querySelectorAll('tr');
-    rows.forEach((tr, i)=>{
-      const tdTime = tr.children[1];
-      // remove any existing delta span
-      const existingSpan = tdTime.querySelector('.delta-badge');
-      if(existingSpan) existingSpan.remove();
-      const arrival = new Date(actualDepartureTime.getTime() + i*60000);
-      const scheduledBase = getNextDeparture(new Date(), selectedRoute.freq);
-      const scheduledArrival = new Date(scheduledBase.getTime() + i*60000);
-      const deltaSec = Math.round((arrival - scheduledArrival)/1000);
-      if(deltaSec !== 0){
-        const deltaMin = Math.floor(Math.abs(deltaSec)/60);
-        const deltaRem = Math.abs(deltaSec)%60;
-        const sign = deltaSec>0? '+':'-';
-        const span = document.createElement('span');
-        span.className = 'delta-badge';
-        span.style.marginLeft = '8px';
-        span.style.fontSize = '12px';
-        span.style.padding = '2px 6px';
-        span.style.borderRadius = '6px';
-        span.textContent = `${sign}${deltaMin}:${pad(deltaRem)}`;
-        if(deltaSec > 0) span.style.background = 'rgba(228,63,90,0.12)';
-        else span.style.background = 'rgba(28,200,138,0.06)';
-        tdTime.appendChild(span);
-      }
-    });
-  }
-}
+  // refresh delta badges (avoid duplicates)
+  const rows = tableBody.querySelectorAll('tr');
+  rows.forEach((tr, i)=>{
+    const tdTime = tr.children[1];
+    const existing = tdTime.querySelector('.delta-badge');
+    if(existing) existing.remove();
 
+    const arrival = new Date(actualDepartureTime.getTime() + i*60000);
+    const scheduledBase = getNextDeparture(new Date(), selectedRoute.freq);
+    const scheduledArrival = new Date(scheduledBase.getTime() + i*60000);
+    const deltaSec = Math.round((arrival - scheduledArrival)/1000);
+    if(deltaSec !== 0){
+      const deltaMin = Math.floor(Math.abs(deltaSec)/60);
+      const deltaRem = Math.abs(deltaSec)%60;
+      const sign = deltaSec>0? '+':'-';
+      const span = document.createElement('span');
+      span.className = 'delta-badge';
+      span.style.marginLeft = '8px';
+      span.style.fontSize = '12px';
+      span.style.padding = '2px 6px';
+      span.style.borderRadius = '6px';
+      span.textContent = `${sign}${deltaMin}:${pad(deltaRem)}`;
+      span.style.background = deltaSec > 0 ? 'rgba(228,63,90,0.12)' : 'rgba(28,200,138,0.06)';
+      tdTime.appendChild(span);
+    }
+  });
+}
 function clearTimer(){
   if(timerInterval) clearInterval(timerInterval);
   timerInterval = null;
   timerDisplay.textContent = '--:--';
   nextBtn.disabled = true;
 }
-
 function endRoute(){
   clearTimer();
   statusDiv.textContent = 'Route completed!';
-  // free route ownership
-  freeRoute(selectedRouteName);
-  // reset
   currentStopIndex = 0;
   actualDepartureTime = null;
   currentStationEl.textContent = '';
-  // re-render timetable without depart times (show next scheduled)
   renderDynamicTimetable(selectedRoute, null);
 }
 
-/* -------------------------
-   Logs, users, admin actions
-   ------------------------- */
-function logShift(user, routeName){
-  const entry = { user, route: routeName, time: new Date().toISOString() };
-  LOGS.unshift(entry);
-  saveLogsAndRefresh();
-}
-
-function saveLogs(l){ saveLogsAndRefresh(); } // alias (kept for compatibility)
-function saveUsers(u){ save(STORAGE_USERS, u); USERS = u; }
-function saveRoutes(r){ save(STORAGE_ROUTES, r); ROUTES = r; }
-function saveActive(a){ save(STORAGE_ACTIVE, a); ACTIVE_DRIVERS = a; }
-function saveStrikes(s){ save(STORAGE_STRIKES, s); STRIKES = s; }
-
-/* Admin: create user */
+/* ============================================================
+   ADMIN ACTIONS
+   ============================================================ */
 createUserBtn.addEventListener('click', ()=>{
   const u = (newUsername.value || '').trim();
   const p = newPassword.value || '';
   if(!u || !p){ alert('Provide username and password'); return; }
   if(USERS[u]){ alert('User already exists'); return; }
   USERS[u] = { pw: p, admin: false };
-  saveUsersAndRefresh();
-  newUsername.value = ''; newPassword.value = '';
+  saveUsers(USERS); populateAdminLists();
+  newUsername.value=''; newPassword.value='';
   alert(`Created user ${u}`);
 });
-
-/* Admin: give strike */
 giveStrikeBtn.addEventListener('click', ()=>{
   const u = strikeSelect.value;
   const amt = parseInt(strikeAmount.value || '1', 10);
   if(!u){ alert('Select user'); return; }
   STRIKES[u] = (STRIKES[u] || 0) + amt;
-  saveStrikesAndRefresh();
+  saveStrikes(STRIKES); populateAdminLists();
   alert(`Gave ${amt} strike(s) to ${u}. Total: ${STRIKES[u]}`);
 });
-
-/* Admin: remove strike */
 removeStrikeBtn.addEventListener('click', ()=>{
   const u = strikeSelect.value;
   if(!u){ alert('Select user'); return; }
   if(!STRIKES[u]){ alert(`${u} has no strikes`); return; }
   const amt = parseInt(strikeAmount.value || '1', 10);
   STRIKES[u] = Math.max(0, (STRIKES[u] || 0) - amt);
-  saveStrikesAndRefresh();
+  saveStrikes(STRIKES); populateAdminLists();
   alert(`Removed ${amt} strike(s) from ${u}. Total: ${STRIKES[u]}`);
 });
-
-/* Admin: add route */
 addRouteBtn.addEventListener('click', ()=>{
   const name = (newRouteName.value || '').trim();
   const freq = parseInt(newRouteFreq.value || '10', 10);
   const stopsRaw = (newRouteStops.value || '').trim();
   if(!name || !stopsRaw){ alert('Provide route name and stops'); return; }
-  const stops = stopsRaw.split(/\r?\n|,/).map(s=>s.trim()).filter(Boolean);
-  if(stops.length < 2){ alert('Need at least 2 stops'); return; }
+  const stops = stopsRaw.split(/\r?\n|,/).map(s=>s.trim()).filter(Boolean).map(n=>({name:n}));
   ROUTES[name] = { freq: freq || 10, stops };
   const rev = name + ' 2';
-  ROUTES[rev] = { freq: freq || 10, stops: [...stops].reverse() };
-  saveRoutesAndRefresh();
-  newRouteName.value = ''; newRouteFreq.value = ''; newRouteStops.value = '';
+  ROUTES[rev] = { freq: freq || 10, stops: [...stops].slice().reverse() };
+  saveRoutes(ROUTES); populateRoutesSelect(); populateAdminLists();
+  newRouteName.value=''; newRouteFreq.value=''; newRouteStops.value='';
 });
-
-/* Admin: open edit route dialog (simple prompts) */
 function openEditRouteDialog(routeName){
   const r = ROUTES[routeName];
   if(!r) return alert('Route not found');
-  const newName = prompt('Edit route name:', routeName);
-  if(!newName) return;
+  const newName = prompt('Edit route name:', routeName); if(!newName) return;
   const newFreq = prompt('Frequency (minutes):', String(r.freq));
-  const freqNum = parseInt(newFreq || String(r.freq), 10) || r.freq;
-  const stopsStr = prompt('Stops (one per line or comma separated):', r.stops.join('\n'));
+  const freqNum = parseInt(newFreq || String(r.freq),10) || r.freq;
+  const stopsStr = prompt('Stops (one per line or comma separated):', r.stops.map(s=>getStopName(s)).join('\n'));
   if(!stopsStr) return;
-  const stops = stopsStr.split(/\r?\n|,/).map(s=>s.trim()).filter(Boolean);
-  // Apply changes: if name changed, delete old and set new (handle reverse)
+  const stops = stopsStr.split(/\r?\n|,/).map(s=>s.trim()).filter(Boolean).map(n=>({name:n}));
+
   const oldRev = routeName.endsWith(' 2') ? routeName.replace(/ 2$/,'') : routeName + ' 2';
-  // Remove old and its reverse
-  delete ROUTES[routeName];
-  if(ROUTES[oldRev]) delete ROUTES[oldRev];
-  // Add new
+  delete ROUTES[routeName]; if(ROUTES[oldRev]) delete ROUTES[oldRev];
+
   ROUTES[newName] = { freq: freqNum, stops };
-  ROUTES[newName + ' 2'] = { freq: freqNum, stops: [...stops].reverse() };
-  saveRoutesAndRefresh();
+  ROUTES[newName + ' 2'] = { freq: freqNum, stops: [...stops].slice().reverse() };
+  saveRoutes(ROUTES); populateRoutesSelect(); populateAdminLists();
   alert('Route updated');
 }
+refreshRoutesBtn.addEventListener('click', ()=>{
+  ROUTES = loadRoutes(); populateRoutesSelect(); populateAdminLists();
+});
 
-/* refresh routes list */
-refreshRoutesBtn.addEventListener('click', ()=>{ ROUTES = loadRoutes(); populateRoutesSelect(); populateAdminLists(); });
-
-/* helper saves */
-function saveLogsAndRefresh(){ save(STORAGE_LOGS, LOGS); renderLogs(); }
-function saveRoutesAndRefresh(){ save(STORAGE_ROUTES, ROUTES); populateRoutesSelect(); populateAdminLists(); }
-function saveUsersAndRefresh(){ save(STORAGE_USERS, USERS); populateAdminLists(); }
-function saveActiveAndRefresh(){ save(STORAGE_ACTIVE, ACTIVE_DRIVERS); renderActiveDrivers(); }
-function saveStrikesAndRefresh(){ save(STORAGE_STRIKES, STRIKES); populateAdminLists(); }
-function saveRouteOwnersAndRefresh(){ save(STORAGE_ROUTE_OWNERS, ROUTE_OWNERS); }
-
-/* -------------------------
-   Init on load
-   ------------------------- */
+/* ============================================================
+   INIT
+   ============================================================ */
 function initUI(){
   populateRoutesSelect();
   populateAdminLists();
   renderActiveDrivers();
   renderLogs();
-  // set strike select
-  const names = Object.keys(USERS).sort();
-  strikeSelect.innerHTML = '';
-  names.forEach(n => {
-    const o = document.createElement('option'); o.value = n; o.textContent = n;
-    strikeSelect.appendChild(o);
-  });
 }
-
-// initial call
 initUI();
 
-  // ======================
-// Vertrektijden UI
-// ======================
-
-// Maak een paneel voor vertrektijden
+/* ============================================================
+   VERTREKTIJDEN PANEL
+   ============================================================ */
 const departuresPanel = document.createElement("div");
 departuresPanel.id = "departuresPanel";
 departuresPanel.style.cssText = `
@@ -1059,10 +842,10 @@ departuresPanel.style.cssText = `
   display:none; justify-content:center; align-items:center; z-index:9999;
 `;
 departuresPanel.innerHTML = `
-  <div style="background:#0b1220; padding:20px; border-radius:12px; width:420px; max-height:80vh; overflow:auto;">
+  <div style="background:#0b1220; padding:20px; border-radius:12px; width:520px; max-height:80vh; overflow:auto;">
     <h2 style="margin-top:0;">Vertrektijden</h2>
     <table style="width:100%; border-collapse:collapse;">
-      <thead><tr><th>Lijn</th><th>Locatie</th><th>Vertrektijd</th><th>In</th></tr></thead>
+      <thead><tr><th style="text-align:left;padding:8px;">Lijn</th><th style="text-align:left;padding:8px;">Locatie</th><th style="text-align:left;padding:8px;">Vertrektijd</th><th style="text-align:left;padding:8px;">In</th></tr></thead>
       <tbody id="departuresBody"></tbody>
     </table>
     <button id="closeDeparturesBtn" style="margin-top:12px;width:100%;background:#6c757d;">Sluiten</button>
@@ -1070,7 +853,6 @@ departuresPanel.innerHTML = `
 `;
 document.body.appendChild(departuresPanel);
 
-// Open/close logica
 document.getElementById("openDeparturesBtn").addEventListener("click", ()=>{
   departuresPanel.style.display = "flex";
   renderDepartures();
@@ -1079,71 +861,43 @@ document.getElementById("closeDeparturesBtn").addEventListener("click", ()=>{
   departuresPanel.style.display = "none";
 });
 
-// Data laden en tonen
 async function renderDepartures(){
   const tbody = document.getElementById("departuresBody");
-  tbody.innerHTML = "<tr><td colspan='4' style='text-align:center;color:#aaa;'>Laden...</td></tr>";
-
-  try {
-    const res = await fetch("https://erlc-bot-meqt.onrender.com/departures");
+  tbody.innerHTML = "<tr><td colspan='4' style='text-align:center;color:#aaa;padding:10px;'>Laden...</td></tr>";
+  try{
+    const res = await fetch(`${DISCORD_BOT_ENDPOINT}/departures`);
     const stored = await res.json();
     tbody.innerHTML = "";
-    const now = new Date();
-
+    const nowDate = new Date();
     if(!stored.length){
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#aaa;">Geen actieve lijnen</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#aaa; padding:10px;">Geen actieve lijnen</td></tr>`;
       return;
     }
-
     stored.forEach(dep=>{
       const tr = document.createElement("tr");
-      const mins = Math.max(0, Math.floor((new Date(dep.time) - now)/60000));
-      tr.innerHTML = `<td>${dep.line}</td><td>${dep.stop}</td><td>${new Date(dep.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td><td>${mins} min</td>`;
+      const mins = Math.max(0, Math.floor((new Date(dep.time) - nowDate)/60000));
+      tr.innerHTML = `
+        <td style="padding:8px;">${dep.line}</td>
+        <td style="padding:8px;">${dep.stop}</td>
+        <td style="padding:8px;">${new Date(dep.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
+        <td style="padding:8px;">${mins} min</td>`;
       tbody.appendChild(tr);
     });
-
-  } catch(err) {
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#f66;">Fout bij laden</td></tr>`;
+  }catch(err){
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#f66; padding:10px;">Fout bij laden</td></tr>`;
     console.error("Fout bij ophalen vertrektijden:", err);
   }
 }
-
-
-// Elke chauffeur die vertrekt → opslaan in localStorage (gedeeld)
 async function registerDeparture(lineName, stopName, departTime){
-  try {
-    await fetch("https://erlc-bot-meqt.onrender.com/departures", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+  try{
+    await fetch(`${DISCORD_BOT_ENDPOINT}/departures`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ line: lineName, stop: stopName, time: departTime })
     });
-  } catch(err) {
+  }catch(err){
     console.error("Fout bij verzenden vertrektijd:", err);
   }
 }
-
-
-
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
