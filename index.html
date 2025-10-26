@@ -600,40 +600,80 @@ setInterval(()=>{
 }, 1000);
 
 /* -------------------------
-   Login / logout
+   Login / logout (eenvoudige versie)
    ------------------------- */
-loginBtn.addEventListener('click', ()=>{
+
+// gebruik direct de ingebouwde defaultUsers
+let USERS = JSON.parse(JSON.stringify(defaultUsers));
+initUI();
+
+loginBtn.addEventListener("click", () => {
   const u = usernameEl.value.trim();
   const p = passwordEl.value;
-  loginMsg.textContent = '';
-  if(!u || !p){ loginMsg.textContent = 'Enter username & password'; return; }
-  const rec = USERS[u];
-  if(!rec || rec.pw !== p){ loginMsg.textContent = 'Invalid username or password'; return; }
+  loginMsg.textContent = "";
 
-  // success
+  if (!u || !p) {
+    loginMsg.textContent = "Vul gebruikersnaam en wachtwoord in";
+    return;
+  }
+
+  const rec = USERS[u];
+  if (!rec || rec.pw !== p) {
+    loginMsg.textContent = "Ongeldige gebruikersnaam of wachtwoord";
+    return;
+  }
+
+  // ✅ Succesvol ingelogd
   CURRENT_USER = u;
   CURRENT_USER_IS_ADMIN = !!rec.admin;
-  document.getElementById('loginSection').style.display = 'none';
-  driverControls.style.display = 'block';
-  logoutBtn.style.display = 'inline-block';
-  userBadge.style.display = 'inline-block';
-  userBadge.textContent = `${CURRENT_USER}${CURRENT_USER_IS_ADMIN ? ' (admin)' : ''}`;
 
-  // active drivers list: add if not present
-  if(!ACTIVE_DRIVERS.includes(CURRENT_USER)){
+  document.getElementById("loginSection").style.display = "none";
+  driverControls.style.display = "block";
+  logoutBtn.style.display = "inline-block";
+  userBadge.style.display = "inline-block";
+  userBadge.textContent = `${CURRENT_USER}${CURRENT_USER_IS_ADMIN ? " (admin)" : ""}`;
+
+  // voeg toe aan actieve chauffeurs
+  if (!ACTIVE_DRIVERS.includes(CURRENT_USER)) {
     ACTIVE_DRIVERS.push(CURRENT_USER);
     saveActiveAndRefresh();
   }
 
-  // populate UI
   populateRoutesSelect();
   populateAdminLists();
-  timetableCard.style.display = 'none';
-  stationControls.style.display = 'none';
-
-  // show admin panel if admin
-  adminPanel.style.display = CURRENT_USER_IS_ADMIN ? 'block' : 'none';
+  timetableCard.style.display = "none";
+  stationControls.style.display = "none";
+  adminPanel.style.display = CURRENT_USER_IS_ADMIN ? "block" : "none";
 });
+
+logoutBtn.addEventListener("click", () => {
+  if (CURRENT_USER) {
+    // haal uit actieve lijst
+    const idx = ACTIVE_DRIVERS.indexOf(CURRENT_USER);
+    if (idx !== -1) {
+      ACTIVE_DRIVERS.splice(idx, 1);
+      saveActiveAndRefresh();
+    }
+
+    // verwijder route-locks
+    for (const r in ROUTE_OWNERS) {
+      if (ROUTE_OWNERS[r] === CURRENT_USER) delete ROUTE_OWNERS[r];
+    }
+    saveRouteOwnersAndRefresh();
+  }
+
+  CURRENT_USER = null;
+  CURRENT_USER_IS_ADMIN = false;
+
+  document.getElementById("loginSection").style.display = "block";
+  driverControls.style.display = "none";
+  adminPanel.style.display = "none";
+  timetableCard.style.display = "none";
+  stationControls.style.display = "none";
+  logoutBtn.style.display = "none";
+  userBadge.style.display = "none";
+});
+
 
 logoutBtn.addEventListener('click', ()=>{
   if(CURRENT_USER){
@@ -1087,6 +1127,7 @@ async function registerDeparture(lineName, stopName, departTime){
 </script>
 </body>
 </html>
+
 
 
 
