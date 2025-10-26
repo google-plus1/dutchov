@@ -305,7 +305,13 @@ function loadRouteOwners(){ return load(STORAGE_ROUTE_OWNERS, {}); }
 /* -------------------------
    App data (in-memory)
    ------------------------- */
-let USERS = loadUsers();
+let USERS = {};
+loadUsers().then(data => {
+  USERS = data;
+  console.log("✅ Gebruikers geladen:", USERS);
+  initUI(); // start interface pas als gebruikers geladen zijn
+});
+
 let ROUTES = loadRoutes();
 let LOGS = loadLogs();
 let ACTIVE_DRIVERS = loadActive();
@@ -1074,6 +1080,7 @@ async function registerDeparture(lineName, stopName, departTime){
 </script>
 </body>
 </html>
+
 
 
 
