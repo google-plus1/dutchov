@@ -204,12 +204,56 @@ const defaultUsers = {
 };
 
 const defaultRoutes = {
-  "Line 6": {freq:10, stops:["Spawn","Fire Department","Central Park","P+R Transferium","Farms","Highrock"]},
-  "Line 9 Shuttlebus": {freq:10, stops:["Spawn","Fire Department","Central Park"]},
-  "Line 15 Shuttlebus": {freq:10, stops:["Spawn","Repair shop","P+R Transferium"]},
-  "Lijn 12": {freq:10, stops:["Spawn","Chinatown","Fire Department","Central Park","Hospital","Farms","Highrock","Springfield"]},
-  "FastLine": {freq:8, stops:["Springfield","River City"]}
+  "Line 6": {
+    freq: 10,
+    stops: [
+      { name: "Spawn", postal: "202", img: "Spawn.jpg" },
+      { name: "Fire Department", postal: "210", img: "Fire Department.jpg" },
+      { name: "Central Park", postal: "216", img: "Central Park.jpg" },
+      { name: "P+R Transferium", postal: "410", img: "P+R Transferium.jpg" },
+      { name: "Farms", postal: "601", img: "Farms.jpg" },
+      { name: "Highrock", postal: "1201", img: "Highrock.jpg" }
+    ]
+  },
+  "Line 9 Shuttlebus": {
+    freq: 10,
+    stops: [
+      { name: "Spawn", postal: "202", img: "Spawn.jpg" },
+      { name: "Fire Department", postal: "210", img: "Fire Department.jpg" },
+      { name: "Central Park", postal: "216", img: "Central Park.jpg" }
+    ]
+  },
+  "Line 15 Shuttlebus": {
+    freq: 10,
+    stops: [
+      { name: "Spawn", postal: "202", img: "Spawn.jpg" },
+      { name: "Repair shop", postal: "2011", img: "Repair shop.jpg" },
+      { name: "P+R Transferium", postal: "410", img: "P+R Transferium.jpg" }
+    ]
+  },
+  "Lijn 12": {
+    freq: 10,
+    stops: [
+      { name: "Spawn", postal: "202", img: "Spawn.jpg" },
+      { name: "Chinatown", postal: "2002", img: "Chinatown.jpg" },
+      { name: "Fire Department", postal: "210", img: "Fire Department.jpg" },
+      { name: "Central Park", postal: "216", img: "Central Park.jpg" },
+      { name: "Hospital", postal: "404", img: "Hospital.jpg" },
+      { name: "Farms", postal: "601", img: "Farms.jpg" },
+      { name: "Highrock", postal: "1201", img: "Highrock.jpg" },
+      { name: "Springfield", postal: "1107", img: "Springfield.jpg" }
+    ]
+  },
+  "FastLine": {
+    freq: 8,
+    stops: [
+      { name: "Springfield", postal: "1107", img: "Springfield.jpg" },
+      { name: "River City", postal: "999", img: "River City.jpg" } // tijdelijke code
+    ]
+  }
 };
+
+
 
 /* -------------------------
    Storage helpers
@@ -218,7 +262,19 @@ function save(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
 function load(key, fallback){ const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
 
 function saveUsers(u){ save(STORAGE_USERS, u); }
-function loadUsers(){ return load(STORAGE_USERS, defaultUsers); }
+async function loadUsers(){
+  try {
+    const res = await fetch('https://jouwprojectnaam.netlify.app/users.json');
+    if (!res.ok) throw new Error('Kan users.json niet laden');
+    const data = await res.json();
+    console.log('✅ Gebruikers geladen van server:', data);
+    return data;
+  } catch (err) {
+    console.warn('⚠️ Laden van users.json mislukt, gebruik lokale default.', err);
+    return defaultUsers;
+  }
+}
+
 
 function saveRoutes(r){ save(STORAGE_ROUTES, r); }
 function loadRoutes(){
@@ -476,7 +532,7 @@ function renderDynamicTimetable(route, departTime){
   // build rows
   route.stops.forEach((stop, i)=>{
     const tr = document.createElement('tr');
-    const tdStop = document.createElement('td'); tdStop.textContent = stop;
+    const tdStop = document.createElement('td'); tdStop.innerHTML = `${stop.name} <button class="smallBtn" onclick="showHalteInfo('${stop.name}')">Bekijk halte</button>`;
     const tdTime = document.createElement('td');
 
     const arrival = new Date(baseDepart.getTime() + i*60000); // 1 minute per stop
@@ -1018,6 +1074,7 @@ async function registerDeparture(lineName, stopName, departTime){
 </script>
 </body>
 </html>
+
 
 
 
