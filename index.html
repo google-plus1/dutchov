@@ -536,10 +536,18 @@ function renderDynamicTimetable(route, departTime){
   nextDepartureEl.textContent = formatTime(baseDepart);
 
   // build rows
-  route.stops.forEach((stop, i)=>{
-    const tr = document.createElement('tr');
-    const tdStop = document.createElement('td'); tdStop.innerHTML = `${stop.name} <button class="smallBtn" onclick="showHalteInfo('${stop.name}')">Bekijk halte</button>`;
-    const tdTime = document.createElement('td');
+  route.stops.forEach((stop, i) => {
+  const tr = document.createElement('tr');
+  const tdStop = document.createElement('td');
+  const stopName = typeof stop === 'object' ? stop.name : stop;
+  tdStop.textContent = stopName;
+
+if (typeof stop === 'object' && stop.postal) {
+  const info = document.createElement('div');
+  info.className = "mutedSmall";
+  info.textContent = `Postcode: ${stop.postal}`;
+  tdStop.appendChild(info);
+}
 
     const arrival = new Date(baseDepart.getTime() + i*60000); // 1 minute per stop
     tdTime.textContent = formatTime(arrival);
@@ -1080,6 +1088,7 @@ async function registerDeparture(lineName, stopName, departTime){
 </script>
 </body>
 </html>
+
 
 
 
